@@ -1,0 +1,79 @@
+@import 'tailwindcss';
+
+/* ========= Base & Acessibilidade ========= */
+*, *::before, *::after { box-sizing: border-box; }
+html:focus-within { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within { scroll-behavior: auto; }
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+:root { color-scheme: light; }
+
+/* ========= Tema global ========= */
+body {
+  background-color: #ffffff; /* fundo claro padrão */
+  color: #000000;            /* texto preto */
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: "Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+}
+
+/* ========= Links (azuis com foco visível) ========= */
+a {
+  color: #1d4ed8; /* blue-700 */
+  text-underline-offset: 2px;
+}
+a:hover { text-decoration: underline; }
+a:visited { color: #1e3a8a; } /* blue-900 */
+a:focus-visible {
+  outline: 2px solid rgba(29, 78, 216, 0.40); /* ring-blue-700/40 */
+  outline-offset: 2px;
+}
+a:active { opacity: 0.9; }
+
+/* ========= Foco para elementos interativos ========= */
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(29, 78, 216, 0.30);
+  outline-offset: 2px;
+}
+
+/* ========= Mídia responsiva ========= */
+img, video, svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* ========= Fallback de animação para botões giratórios ========= */
+.animatedButton {
+  animation-duration: 10000ms;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animatedButton { animation: none !important; }
+}
+
+/* ========= Quill (editor) ========= */
+.ql-container,
+.ql-toolbar,
+.ql-editor { border: none !important; }
+
+.ql-editor {
+  background-color: #ffffff;
+  color: #0a0a0a;
+}
+.ql-editor:focus {
+  outline: 2px solid rgba(29, 78, 216, 0.30);
+  outline-offset: 2px;
+}
