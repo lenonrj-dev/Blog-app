@@ -8,7 +8,7 @@
     "start": "node index.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": "20.x"
   },
   "dependencies": {
     "@clerk/express": "^1.7.42",
