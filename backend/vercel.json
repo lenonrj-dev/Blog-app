@@ -2,12 +2,13 @@
   "version": 2,
   "functions": {
     "api/index.js": {
+      "runtime": "nodejs22.x",
       "memory": 1024,
       "maxDuration": 10
     }
   },
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/api/index.js" }
+  "routes": [
+    { "src": "/(.*)", "dest": "/api/index.js" }
   ],
   "regions": ["gru1"]
 }
