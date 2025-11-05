@@ -12,14 +12,10 @@ const PostMenuActions = ({ post }) => {
   const prefersReduced = useReducedMotion();
   const queryClient = useQueryClient();
 
-  // ⚠️ Hooks SEMPRE no topo (evita "Rendered more hooks than during the previous render")
-  const {
-    isPending: savedLoading,
-    isError: savedError,
-    data: savedData,
-  } = useQuery({
+  // Busca de salvos somente quando logado
+  const { isPending: savedLoading, isError: savedError, data: savedData } = useQuery({
     queryKey: ["savedPosts"],
-    enabled: !!user, // não busca se não estiver logado
+    enabled: !!user,
     queryFn: async () => {
       const token = await getToken();
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/users/saved`, {
@@ -95,7 +91,7 @@ const PostMenuActions = ({ post }) => {
   const tapAnim = prefersReduced ? {} : { scale: 0.98 };
   const hoverAnim = prefersReduced ? {} : { y: -1 };
 
-  // 🔐 Se não estiver logado, não renderiza a UI de ações (mas os hooks acima já foram chamados de forma estável)
+  // Se não estiver logado, não renderiza ações
   if (!user) return null;
 
   return (
@@ -157,10 +153,8 @@ const PostMenuActions = ({ post }) => {
         </motion.button>
       )}
 
-      {/* Divider visual quando houver bloco admin */}
       {isAdmin && <hr className="my-2 border-slate-200" />}
 
-      {/* Admin-only */}
       {isAdmin && (
         <>
           <motion.button
@@ -237,7 +231,7 @@ const PostMenuActions = ({ post }) => {
             >
               <path
                 fill="currentColor"
-                d="M21 2c-1.65 0-3 1.35-3 3v2H8a1 1 0 100 2h1v36c0 1.65 1.35 3 3 3h26c1.65 0 3-1.35 3-3V9h1a1 1 0 100-2h-7V5c0-1.65-1.35-3-3-3h-8zm0 2h8c.55 0 1 .45 1 1v2H20V5c0-.55.45-1 1-1zm-9 5h26v36c0 .55-.45 1-1 1H12c-.55 0-1-.45-1-1V9zm7 5a1 1 0 100 2v24a1 1 0 100-2V14zm6 0a1 1 0 100 2v24a1 1 0 100-2V14zm6 0a1 1 0 100 2v24a1 1 0 100-2V14z"
+                d="M21 2c-1.65 0-3 1.35-3 3v2H8a1 1 0 100 2h1v36c0 1.65 1.35 3 3 3h26c1.65 0 3-1.35 3-3V9h1a1 1 0 100-2h-7V5c0-1.65-1.35-3-3-3h-8zm0 2h8c.55 0 1 .45 1 1v2H20V5c0-.55.45-1 1-1zm-9 5h26v36c0 .55-.45 1-1 1H12c-.55 0-1-.45-1-1V9zm7 5a1 1 0 100 2v24a1 1 0 100-2V14zm6 0a 1 1 0 100 2v24a1 1 0 100-2V14zm6 0a1 1 0 100 2v24a1 1 0 100-2V14z"
               />
             </svg>
             <span className="text-slate-900/95">Excluir</span>

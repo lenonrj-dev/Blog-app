@@ -56,16 +56,8 @@ const PostListItem = ({ post }) => {
           </Link>
         </h3>
 
+        {/* Somente categoria e horário de publicação */}
         <div className="flex flex-wrap items-center gap-2 text-slate-500 text-sm">
-          <span className="sr-only">Autor</span>
-          <span>por</span>
-          <Link
-            className="text-blue-700 no-underline hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 active:opacity-90 cursor-pointer"
-            to={`/posts?author=${post?.user?.username}`}
-            itemProp="author"
-          >
-            {post?.user?.username}
-          </Link>
           <span className="sr-only">Categoria</span>
           <span>em</span>
           <Link

@@ -19,7 +19,7 @@ const LoginPage = () => {
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         className="w-full max-w-md rounded-2xl border border-black/10 bg-white p-4 md:p-6 shadow-sm"
       >
-        <SignIn signUpUrl="/register" />
+        <SignIn signUpUrl="/newsletter" />
       </motion.div>
     </section>
   );
