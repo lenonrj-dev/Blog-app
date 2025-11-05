@@ -78,14 +78,15 @@ export default function SinglePostPage() {
       {hasSchema && (
         <script
           type="application/ld+json"
+          // JSON-LD sem o campo de autor
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "NewsArticle",
               headline: data.title,
+              articleSection: data?.category || "Geral",
               datePublished: createdISO,
               dateModified: createdISO,
-              author: data?.user?.username ? { "@type": "Person", name: data.user.username } : undefined,
               image: data?.img ? [data.img] : undefined,
               mainEntityOfPage: { "@type": "WebPage", "@id": (typeof window !== "undefined" && window.location?.href) || "" },
             }),
@@ -127,7 +128,7 @@ export default function SinglePostPage() {
         </ol>
       </nav>
 
-      {/* TÍTULO + IMAGEM (não comprime o texto) */}
+      {/* TÍTULO + IMAGEM */}
       <div className="flex flex-col lg:flex-row gap-8 items-start">
         <motion.header
           initial={prefersReduced ? {} : { opacity: 0, y: 12 }}
@@ -139,19 +140,8 @@ export default function SinglePostPage() {
             {data.title}
           </h1>
 
+          {/* Meta: apenas categoria e horário */}
           <div className="flex flex-wrap items-center gap-2 text-slate-500 text-sm">
-            <span>por</span>
-            {data.user?.username ? (
-              <Link
-                to={`/posts?author=${encodeURIComponent(data.user.username)}`}
-                className="text-blue-700 no-underline hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 active:opacity-90 rounded cursor-pointer"
-              >
-                {data.user.username}
-              </Link>
-            ) : (
-              <span>—</span>
-            )}
-            <span>em</span>
             {data.category ? (
               <Link
                 to={`/posts?cat=${encodeURIComponent(data.category)}`}
@@ -162,6 +152,7 @@ export default function SinglePostPage() {
             ) : (
               <span>Geral</span>
             )}
+            {createdISO && <span aria-hidden="true" className="text-slate-400">•</span>}
             {createdISO && (
               <time dateTime={createdISO} title={createdHuman} className="text-slate-500">
                 {format(data.createdAt)}
@@ -216,7 +207,7 @@ export default function SinglePostPage() {
         )}
       </div>
 
-      {/* CONTEÚDO + ASIDE (grid para evitar compressão) */}
+      {/* CONTEÚDO + ASIDE */}
       <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_320px] gap-12 items-start">
         <motion.article
           itemScope
@@ -254,22 +245,6 @@ export default function SinglePostPage() {
             </section>
           )}
 
-          {Array.isArray(data?.faq) && data.faq.length > 0 && (
-            <section aria-label="Perguntas frequentes" className="mt-4">
-              <h2 className="text-lg font-semibold text-slate-900 mb-2">Perguntas frequentes</h2>
-              <div className="divide-y divide-slate-200 ring-1 ring-slate-200 rounded-2xl overflow-hidden">
-                {data.faq.slice(0, 6).map((qa, idx) => (
-                  <details key={idx} className="group open:bg-slate-50">
-                    <summary className="cursor-pointer list-none px-4 py-3 text-slate-900 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600/40">
-                      {qa?.question}
-                    </summary>
-                    <div className="px-4 pb-4 text-slate-700">{qa?.answer}</div>
-                  </details>
-                ))}
-              </div>
-            </section>
-          )}
-
           <section aria-label="Engajamento" className="mt-2">
             <div className="flex flex-wrap items-center gap-3">
               <Link
@@ -288,35 +263,10 @@ export default function SinglePostPage() {
           </section>
         </motion.article>
 
+        {/* Aside SEM qualquer bloco de autor */}
         <aside className="md:w-[300px] lg:w-[320px] xl:w-[340px] h-max md:sticky md:top-8" aria-label="Menu lateral">
-          <h2 className="mb-4 text-sm font-medium text-slate-900">Autor</h2>
           <div className="flex flex-col gap-4 rounded-2xl ring-1 ring-slate-200 bg-white p-4 shadow-sm hover:shadow-md">
-            <div className="flex items-center gap-4">
-              {data.user?.img && (
-                <Image
-                  src={data.user.img}
-                  alt={`Avatar de ${data.user?.username || "autor"}`}
-                  className="w-12 h-12 rounded-full object-cover ring-1 ring-slate-200"
-                  w="48"
-                  h="48"
-                  loading="lazy"
-                  decoding="async"
-                />
-              )}
-              {data.user?.username && (
-                <Link
-                  to={`/posts?author=${encodeURIComponent(data.user.username)}`}
-                  className="text-blue-700 no-underline hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 active:opacity-90 rounded cursor-pointer"
-                >
-                  {data.user.username}
-                </Link>
-              )}
-            </div>
-
-            {/* Garante que o card de ações não "vaze" do aside em nenhum breakpoint */}
-            <div className="w-full max-w-full overflow-hidden">
-              <PostMenuActions post={data} />
-            </div>
+            <PostMenuActions post={data} />
 
             <div className="mt-2">
               <h2 className="mt-6 mb-4 text-sm font-medium text-slate-900">Categorias</h2>
