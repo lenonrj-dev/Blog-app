@@ -25,7 +25,7 @@ const AboutPage = () => {
   const schema = {
     "@context": "https://schema.org",
     "@type": "AboutPage",
-    name: "Sobre – SYN | Blog de Notícias",
+    name: "Sobre – AX | Blog de Notícias",
     breadcrumb: {
       "@type": "BreadcrumbList",
       itemListElement: [
@@ -35,7 +35,7 @@ const AboutPage = () => {
     },
     mainEntity: {
       "@type": "Organization",
-      name: "SYN",
+      name: "AX",
       url: typeof window !== "undefined" ? window.location.origin : "",
       sameAs: [],
     },
@@ -47,7 +47,7 @@ const AboutPage = () => {
     mainEntity: [
       {
         "@type": "Question",
-        name: "Quem escreve no blog da SYN?",
+        name: "Quem escreve no blog da AX?",
         acceptedAnswer: {
           "@type": "Answer",
           text: "Conteúdo produzido por um time editorial próprio e colaboradores convidados, seguindo uma política de revisão dupla e checagem de fatos.",
@@ -85,7 +85,7 @@ const AboutPage = () => {
     : { initial: { opacity: 0, y: 10 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, amount: 0.25 } };
 
   return (
-    <section aria-label="Sobre o blog SYN" className="bg-white text-black overflow-x-hidden">
+    <section aria-label="Sobre o blog AX" className="bg-white text-black overflow-x-hidden">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
 
@@ -121,7 +121,7 @@ const AboutPage = () => {
 
           <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-900 shadow-sm ring-1 ring-slate-200/70 backdrop-blur">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
-            Sobre o SYN
+            Sobre o AX
           </div>
 
           <h1 className="mt-3 max-w-4xl text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900">
@@ -133,7 +133,7 @@ const AboutPage = () => {
           </h1>
 
           <p className="mt-3 max-w-3xl text-base sm:text-lg leading-relaxed text-slate-600">
-            O SYN é um blog de notícias orientado por dados. Cobrimos ciência, política, negócios, tecnologia e marketing
+            O AX é um blog de notícias orientado por dados. Cobrimos ciência, política, negócios, tecnologia e marketing
             com foco em precisão, contexto e acessibilidade. Nosso objetivo é oferecer leitura rápida, moderna e inclusiva.
           </p>
 
@@ -334,7 +334,7 @@ const AboutPage = () => {
           <div className="mt-4 divide-y divide-slate-200">
             {[
               {
-                q: "Quem escreve no blog da SYN?",
+                q: "Quem escreve no blog da AX?",
                 a: "Nosso time editorial interno com apoio de especialistas convidados. Todo material passa por revisão de estilo e, quando necessário, revisão técnica.",
               },
               {

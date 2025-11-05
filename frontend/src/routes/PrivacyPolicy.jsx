@@ -141,7 +141,7 @@ export default function PrivacyPolicy() {
         <motion.section {...rise} aria-labelledby="contato" id="contato">
           <h2 id="contato" className="text-xl md:text-2xl font-semibold tracking-tight">Contato do Encarregado (DPO)</h2>
           <p className="mt-3 text-slate-700">Para exercer direitos ou tirar dúvidas, entre em contato com nosso Encarregado de Dados (DPO):</p>
-          <p className="mt-1 text-slate-800"><strong>E-mail:</strong> <a href="mailto:privacidade@seudominio.com" className="text-blue-700 underline underline-offset-2 hover:no-underline">privacidade@seudominio.com</a></p>
+          <p className="mt-1 text-slate-800"><strong>E-mail:</strong> <a href="mailto:axsuporteblog@gmail.com" className="text-blue-700 underline underline-offset-2 hover:no-underline">axsuporteblog@gmail.com</a></p>
           <p className="text-slate-500 text-sm mt-2">Última atualização: {new Date().toLocaleDateString("pt-BR")}</p>
         </motion.section>
       </div>

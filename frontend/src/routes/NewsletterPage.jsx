@@ -118,9 +118,9 @@ export default function NewsletterPage() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "WebPage",
-            name: "Newsletter — AUX Blog",
+            name: "Newsletter — AX Blog",
             description:
-              "Assine a newsletter do AUX Blog e receba curadoria semanal de notícias com análise, contexto e links verificados.",
+              "Assine a newsletter do AX Blog e receba curadoria semanal de notícias com análise, contexto e links verificados.",
             breadcrumb: {
               "@type": "BreadcrumbList",
               itemListElement: [
@@ -137,7 +137,7 @@ export default function NewsletterPage() {
             potentialAction: {
               "@type": "SubscribeAction",
               target: typeof window !== "undefined" ? window.location.href : "",
-              name: "Assinar newsletter do AUX Blog",
+              name: "Assinar newsletter do AX Blog",
             },
           }),
         }}
@@ -146,7 +146,7 @@ export default function NewsletterPage() {
       {/* Hero */}
       <header className="mb-6 md:mb-10 max-w-3xl">
         <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-neutral-900">
-          Assine a newsletter do AUX —
+          Assine a newsletter do AX —
           <span
             className="ml-1 bg-clip-text text-transparent"
             style={{ backgroundImage: GRADIENT }}
@@ -293,7 +293,7 @@ export default function NewsletterPage() {
                   className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-700 focus-visible:ring-blue-600/40"
                 />
                 <span>
-                  Concordo em receber e-mails do AUX Blog e entendo que posso cancelar a assinatura a qualquer momento.
+                  Concordo em receber e-mails do AX Blog e entendo que posso cancelar a assinatura a qualquer momento.
                   Li e aceito a {" "}
                   <Link
                     to="/privacidade"
@@ -333,14 +333,14 @@ export default function NewsletterPage() {
           </form>
         </motion.section>
 
-        {/* Benefícios / Conteúdo auxiliar */}
+        {/* Benefícios / Conteúdo AXiliar */}
         <motion.aside
           {...container}
           aria-label="Por que assinar"
           className="rounded-2xl ring-1 ring-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md"
         >
           <h2 className="text-base font-semibold text-neutral-900">
-            Por que a newsletter da AUX é diferente?
+            Por que a newsletter da AX é diferente?
           </h2>
           <ul className="mt-3 space-y-2 text-neutral-800">
             <li>• Curadoria humana com critérios editoriais claros.</li>
