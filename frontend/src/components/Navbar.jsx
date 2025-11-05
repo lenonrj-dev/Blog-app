@@ -48,7 +48,7 @@ export default function Navbar() {
           >
             {/* Se usar public/, prefira caminho absoluto "/logo.svg" */}
             <img
-              src="/logo.svg"
+              src="/logo.png"
               alt="Logo Ateliux"
               width={32}
               height={32}
