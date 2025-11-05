@@ -56,17 +56,16 @@ const PostListItem = ({ post }) => {
           </Link>
         </h3>
 
-        {/* Somente categoria e horário de publicação */}
+        {/* Somente categoria + horário */}
         <div className="flex flex-wrap items-center gap-2 text-slate-500 text-sm">
-          <span className="sr-only">Categoria</span>
-          <span>em</span>
           <Link
             to={`/posts?cat=${encodeURIComponent(post?.category || "")}`}
             className="text-blue-700 no-underline hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 active:opacity-90 cursor-pointer"
             itemProp="articleSection"
           >
-            {post?.category}
+            {post?.category || "Geral"}
           </Link>
+          {createdISO && <span aria-hidden="true" className="text-slate-400">•</span>}
           {createdISO && (
             <time dateTime={createdISO} className="text-slate-500" itemProp="datePublished">
               {format(post.createdAt)}
