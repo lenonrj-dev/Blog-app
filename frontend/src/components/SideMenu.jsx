@@ -6,160 +6,127 @@ const SideMenu = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const prefersReduced = useReducedMotion();
 
-  const currentSort = searchParams.get("sort") || "";
-  const currentCat = searchParams.get("cat") || "";
+  const currentSort = (searchParams.get("sort") || "").toLowerCase();
+  const currentCat = (searchParams.get("cat") || "").toLowerCase();
 
-  const handleFilterChange = (e) => {
-    if (searchParams.get("sort") !== e.target.value) {
-      setSearchParams({
-        ...Object.fromEntries(searchParams.entries()),
-        sort: e.target.value,
-      });
-    }
+  const updateParams = (patch) => {
+    const base = Object.fromEntries(searchParams.entries());
+    const next = { ...base, ...patch };
+    // remove chaves vazias para evitar URL suja
+    Object.keys(next).forEach((k) => {
+      if (next[k] === "" || next[k] == null) delete next[k];
+    });
+    setSearchParams(next, { replace: true });
+  };
+
+  const handleSortChange = (e) => {
+    const value = e.target.value;
+    if (currentSort !== value) updateParams({ sort: value });
   };
 
   const handleCategoryChange = (category) => {
-    if (searchParams.get("cat") !== category) {
-      setSearchParams({
-        ...Object.fromEntries(searchParams.entries()),
-        cat: category,
-      });
-    }
+    if (currentCat !== category) updateParams({ cat: category });
   };
+
+  const fadeBlock = prefersReduced
+    ? {}
+    : { initial: { opacity: 0, y: 10 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, amount: 0.3 }, transition: { duration: 0.32, ease: "easeOut" } };
 
   return (
     <aside
-      className="px-4 pb-4 h-max sticky top-8 rounded-2xl ring-1 ring-slate-200 bg-white shadow-sm hover:shadow-md"
-      aria-label="Barra lateral"
+      role="complementary"
+      aria-label="Barra lateral de filtros e busca"
+      // ✅ Corrigido: não sobrepor conteúdo
+      // - mobile: posição estática e z-0 (nunca fica por cima)
+      // - desktop: sticky dentro da coluna, com rolagem própria
+      className="relative z-0 w-full md:w-[280px] lg:w-[320px] xl:w-[340px] overflow-hidden md:overflow-visible md:sticky md:top-8 h-max md:max-h-[calc(100vh-6rem)]"
     >
-      <motion.h2
-        initial={prefersReduced ? {} : { opacity: 0, y: 8 }}
-        whileInView={prefersReduced ? {} : { opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.4 }}
-        transition={{ duration: 0.32, ease: "easeOut" }}
-        className="mb-4 text-sm font-medium tracking-tight text-slate-900/95"
-      >
-        Buscar
-      </motion.h2>
+      <div className="rounded-2xl ring-1 ring-slate-200 bg-white p-4 md:p-5 shadow-sm hover:shadow-md transition-shadow">
+        {/* BUSCA */}
+        <motion.div {...fadeBlock}>
+          <h2 className="mb-3 text-sm font-semibold tracking-tight text-slate-900">Buscar</h2>
+          <Search />
+        </motion.div>
 
-      <motion.div
-        initial={prefersReduced ? {} : { opacity: 0, y: 8 }}
-        whileInView={prefersReduced ? {} : { opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.3 }}
-        transition={{ duration: 0.32, ease: "easeOut" }}
-      >
-        <Search />
-      </motion.div>
+        <hr className="my-5 border-slate-200" aria-hidden="true" />
 
-      <motion.h2
-        initial={prefersReduced ? {} : { opacity: 0, y: 8 }}
-        whileInView={prefersReduced ? {} : { opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.4 }}
-        transition={{ duration: 0.32, ease: "easeOut", delay: 0.04 }}
-        className="mt-8 mb-4 text-sm font-medium tracking-tight text-slate-900/95"
-      >
-        Ordenar
-      </motion.h2>
+        {/* ORDENAR */}
+        <motion.fieldset {...fadeBlock} className="flex flex-col gap-2 text-sm" role="radiogroup" aria-label="Ordenar resultados">
+          <legend className="mb-2 text-sm font-semibold tracking-tight text-slate-900">Ordenar</legend>
 
-      <fieldset
-        role="radiogroup"
-        aria-label="Ordenar resultados"
-        aria-describedby="ordenar-dica"
-        className="flex flex-col gap-2 text-sm"
-      >
-        <span id="ordenar-dica" className="sr-only">
-          Selecione uma opção de ordenação para reordenar os resultados
-        </span>
+          {[
+            { value: "newest", label: "Mais recentes" },
+            { value: "popular", label: "Mais populares" },
+            { value: "trending", label: "Em alta" },
+            { value: "oldest", label: "Mais antigas" },
+          ].map(({ value, label }) => (
+            <label key={value} htmlFor={`sort-${value}`} className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                id={`sort-${value}`}
+                type="radio"
+                name="sort"
+                value={value}
+                onChange={handleSortChange}
+                checked={currentSort === value}
+                className="h-4 w-4 rounded-md border-slate-300 text-blue-600 focus-visible:ring-blue-600/40"
+              />
+              <span className="text-slate-700">{label}</span>
+            </label>
+          ))}
+        </motion.fieldset>
 
-        <label htmlFor="sort-newest" className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            id="sort-newest"
-            type="radio"
-            name="sort"
-            onChange={handleFilterChange}
-            value="newest"
-            defaultChecked={currentSort === "newest"}
-            className="appearance-none w-4 h-4 rounded-[6px] ring-1 ring-slate-300 checked:ring-2 checked:ring-blue-600/40 bg-white checked:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40"
-          />
-          <span className="text-slate-700">Mais recentes</span>
-        </label>
+        <hr className="my-5 border-slate-200" aria-hidden="true" />
 
-        <label htmlFor="sort-popular" className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            id="sort-popular"
-            type="radio"
-            name="sort"
-            onChange={handleFilterChange}
-            value="popular"
-            defaultChecked={currentSort === "popular"}
-            className="appearance-none w-4 h-4 rounded-[6px] ring-1 ring-slate-300 checked:ring-2 checked:ring-blue-600/40 bg-white checked:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40"
-          />
-          <span className="text-slate-700">Mais populares</span>
-        </label>
+        {/* CATEGORIAS */}
+        <motion.nav {...fadeBlock} aria-label="Categorias" className="text-sm">
+          <h2 className="mb-3 text-sm font-semibold tracking-tight text-slate-900">Categorias</h2>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { key: "ciencia", label: "Ciência" },
+              { key: "politica", label: "Política" },
+              { key: "negocios", label: "Negócios" },
+              { key: "tecnologia", label: "Tecnologia" },
+              { key: "marketing", label: "Marketing" },
+            ].map(({ key, label }) => {
+              const selected = currentCat === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => handleCategoryChange(key)}
+                  aria-current={selected ? "true" : undefined}
+                  aria-pressed={selected}
+                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 ${
+                    selected
+                      ? "text-white shadow-sm"
+                      : "text-slate-700 ring-1 ring-slate-200 hover:ring-blue-300"
+                  }`}
+                  style={selected ? { background: "linear-gradient(90deg,#0ea5e9 0%,#06b6d4 100%)" } : {}}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </motion.nav>
 
-        <label htmlFor="sort-trending" className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            id="sort-trending"
-            type="radio"
-            name="sort"
-            onChange={handleFilterChange}
-            value="trending"
-            defaultChecked={currentSort === "trending"}
-            className="appearance-none w-4 h-4 rounded-[6px] ring-1 ring-slate-300 checked:ring-2 checked:ring-blue-600/40 bg-white checked:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40"
-          />
-          <span className="text-slate-700">Em alta</span>
-        </label>
-
-        <label htmlFor="sort-oldest" className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            id="sort-oldest"
-            type="radio"
-            name="sort"
-            onChange={handleFilterChange}
-            value="oldest"
-            defaultChecked={currentSort === "oldest"}
-            className="appearance-none w-4 h-4 rounded-[6px] ring-1 ring-slate-300 checked:ring-2 checked:ring-blue-600/40 bg-white checked:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40"
-          />
-          <span className="text-slate-700">Mais antigas</span>
-        </label>
-      </fieldset>
-
-      <motion.h2
-        initial={prefersReduced ? {} : { opacity: 0, y: 8 }}
-        whileInView={prefersReduced ? {} : { opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.4 }}
-        transition={{ duration: 0.32, ease: "easeOut", delay: 0.04 }}
-        className="mt-8 mb-4 text-sm font-medium tracking-tight text-slate-900/95"
-      >
-        Categorias
-      </motion.h2>
-
-      <div className="flex flex-col gap-2 text-sm" role="navigation" aria-label="Categorias">
-        {[
-          { key: "ciencia", label: "Ciência" },
-          { key: "politica", label: "Política" },
-          { key: "negocios", label: "Negócios" },
-          { key: "tecnologia", label: "Tecnologia" },
-          { key: "marketing", label: "Marketing" },
-        ].map(({ key, label }) => (
-          <motion.span
-            key={key}
-            whileTap={prefersReduced ? {} : { scale: 0.98 }}
-            role="button"
-            tabIndex={0}
-            aria-current={currentCat === key ? "true" : undefined}
-            aria-pressed={currentCat === key}
-            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleCategoryChange(key)}
-            className={`inline-flex w-fit items-center gap-2 rounded-lg px-1 py-0.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 active:opacity-90 ${
-              currentCat === key
-                ? "text-blue-800 underline underline-offset-2"
-                : "text-blue-700 hover:underline underline-offset-2"
-            }`}
-            onClick={() => handleCategoryChange(key)}
+        {/* AÇÕES SECUNDÁRIAS */}
+        <motion.div {...fadeBlock} className="mt-6 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => updateParams({ sort: "newest" })}
+            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-900 no-underline shadow-sm hover:shadow-md hover:bg-slate-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 px-3 py-2 text-xs font-medium"
           >
-            {label}
-          </motion.span>
-        ))}
+            Redefinir ordenação
+          </button>
+          <button
+            type="button"
+            onClick={() => updateParams({ cat: "" })}
+            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-900 no-underline shadow-sm hover:shadow-md hover:bg-slate-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 px-3 py-2 text-xs font-medium"
+          >
+            Limpar categoria
+          </button>
+        </motion.div>
       </div>
     </aside>
   );

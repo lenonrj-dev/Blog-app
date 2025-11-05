@@ -80,16 +80,14 @@ const AboutPage = () => {
     ],
   };
 
+  const fadeUp = reduce
+    ? {}
+    : { initial: { opacity: 0, y: 10 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, amount: 0.25 } };
+
   return (
-    <section aria-label="Sobre o blog SYN" className="bg-white text-black">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-      />
+    <section aria-label="Sobre o blog SYN" className="bg-white text-black overflow-x-hidden">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
 
       {/* Breadcrumb */}
       <nav aria-label="Trilha de navegação" className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
@@ -107,20 +105,57 @@ const AboutPage = () => {
         </ol>
       </nav>
 
-      <main id="conteudo" className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
-        {/* Hero / Título */}
-        <header className="mb-8 md:mb-10">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight">SYN — Blog de Notícias</h1>
-          <p className="mt-3 text-slate-700 max-w-3xl">
-            O SYN é um blog de notícias orientado por dados, com cobertura ágil e
-            análise clara sobre ciência, política, negócios, tecnologia e marketing. Nosso
-            compromisso é oferecer informação precisa, contexto acessível e uma
-            experiência de leitura rápida, moderna e inclusiva.
-          </p>
-        </header>
+      <main id="conteudo" className="relative max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        {/* Hero */}
+        <motion.header
+          {...fadeUp}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="relative mb-10 md:mb-12 rounded-3xl border border-slate-200 bg-white p-6 md:p-10 shadow-sm"
+        >
+          {/* gradient underlay */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 -top-8 mx-auto h-24 w-[92%] rounded-3xl blur-3xl"
+            style={{ background: "radial-gradient(60% 60% at 50% 40%, rgba(37,99,235,0.12) 0%, rgba(34,211,238,0.12) 55%, transparent 80%)" }}
+          />
 
-        {/* KPIs / Destaques */}
-        <section className="grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-6 mb-10">
+          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-900 shadow-sm ring-1 ring-slate-200/70 backdrop-blur">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
+            Sobre o SYN
+          </div>
+
+          <h1 className="mt-3 max-w-4xl text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900">
+            Quem somos e como
+            {" "}
+            <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
+              produzimos notícias
+            </span>
+          </h1>
+
+          <p className="mt-3 max-w-3xl text-base sm:text-lg leading-relaxed text-slate-600">
+            O SYN é um blog de notícias orientado por dados. Cobrimos ciência, política, negócios, tecnologia e marketing
+            com foco em precisão, contexto e acessibilidade. Nosso objetivo é oferecer leitura rápida, moderna e inclusiva.
+          </p>
+
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Link
+              to="/contato"
+              className="inline-flex items-center justify-center rounded-xl border border-transparent px-5 py-2.5 text-sm font-semibold text-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 active:scale-[0.98]"
+              style={{ background: "linear-gradient(90deg, #2563eb 0%, #06b6d4 100%)" }}
+            >
+              Fale com a redação
+            </Link>
+            <Link
+              to="/sobre#politica-editorial"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/30"
+            >
+              Ver diretrizes editoriais
+            </Link>
+          </div>
+        </motion.header>
+
+        {/* KPIs */}
+        <section className="mb-12 grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-6">
           {[
             { k: "+1200", l: "matérias publicadas" },
             { k: "5", l: "editorias ativas" },
@@ -133,45 +168,45 @@ const AboutPage = () => {
               whileInView={reduce ? {} : { opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.35 }}
-              className="rounded-2xl ring-1 ring-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md"
+              className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md"
             >
-              <div className="text-2xl md:text-3xl font-semibold">{m.k}</div>
+              <div className="absolute left-0 top-0 h-1 w-full bg-gradient-to-r from-blue-600 to-cyan-400" />
+              <div className="text-2xl md:text-3xl font-semibold text-slate-900">{m.k}</div>
               <div className="text-sm text-slate-600">{m.l}</div>
             </motion.div>
           ))}
         </section>
 
         {/* Missão & Editorial */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 mb-10">
+        <section className="mb-12 grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
           <motion.article
             initial={reduce ? {} : { opacity: 0, y: 10 }}
             whileInView={reduce ? {} : { opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.25 }}
             transition={{ duration: 0.35 }}
-            className="lg:col-span-2 rounded-2xl ring-1 ring-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md"
+            className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md"
           >
-            <h2 className="text-xl md:text-2xl font-semibold tracking-tight">Nossa missão</h2>
+            <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-slate-900">Nossa missão</h2>
             <p className="mt-3 text-slate-700 leading-relaxed">
-              Tornar a informação de qualidade acessível para todos — sem jargões
-              desnecessários, sem ruído e com checagem rigorosa. Priorizamos fontes
-              oficiais, estudos revisados por pares e relatórios de órgãos confiáveis.
+              Tornar a informação de qualidade acessível para todos — sem jargões desnecessários, sem ruído e com checagem rigorosa.
+              Priorizamos fontes oficiais, estudos revisados por pares e relatórios de órgãos confiáveis.
             </p>
             <p className="mt-3 text-slate-700 leading-relaxed">
-              Acreditamos que boas decisões começam com bons dados e um jornalismo
-              responsável. Por isso, cada matéria busca responder rapidamente ao
-              “o que aconteceu, por que importa e o que observar a seguir”.
+              Acreditamos que boas decisões começam com bons dados e um jornalismo responsável. Em cada matéria respondemos:
+              <span className="ml-1 font-medium text-slate-900">o que aconteceu, por que importa e o que observar a seguir.</span>
             </p>
           </motion.article>
 
           <motion.aside
+            id="politica-editorial"
+            aria-label="Política editorial"
             initial={reduce ? {} : { opacity: 0, y: 10 }}
             whileInView={reduce ? {} : { opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.25 }}
             transition={{ duration: 0.35 }}
-            className="rounded-2xl ring-1 ring-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md"
-            aria-label="Política editorial"
+            className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md"
           >
-            <h2 className="text-lg font-semibold">Política editorial</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Política editorial</h2>
             <ul className="mt-3 list-disc pl-5 text-slate-700 space-y-2">
               <li>Independência: não aceitamos interferência em pauta/conclusão.</li>
               <li>Transparência: correções recebem nota de edição e data.</li>
@@ -182,8 +217,8 @@ const AboutPage = () => {
         </section>
 
         {/* Como trabalhamos */}
-        <section className="rounded-2xl ring-1 ring-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md mb-10">
-          <h2 className="text-xl md:text-2xl font-semibold tracking-tight">Como trabalhamos</h2>
+        <section className="mb-12 rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md">
+          <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-slate-900">Como trabalhamos</h2>
           <motion.ul
             variants={listVariants}
             initial="hidden"
@@ -217,12 +252,9 @@ const AboutPage = () => {
                 d: "Respeitamos LGPD. Métricas são anonimizadas e coletadas apenas após consentimento.",
               },
             ].map((i) => (
-              <motion.li
-                key={i.t}
-                variants={itemVariants}
-                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-              >
-                <h3 className="font-medium">{i.t}</h3>
+              <motion.li key={i.t} variants={itemVariants} className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="absolute left-0 top-0 h-1 w-full bg-gradient-to-r from-blue-600 to-cyan-400" />
+                <h3 className="font-medium text-slate-900">{i.t}</h3>
                 <p className="mt-1 text-sm text-slate-700">{i.d}</p>
               </motion.li>
             ))}
@@ -230,15 +262,13 @@ const AboutPage = () => {
         </section>
 
         {/* Ligações internas / Categorias e CTA */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 mb-10">
+        <section className="mb-12 grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
           <motion.div
-            initial={reduce ? {} : { opacity: 0, y: 10 }}
-            whileInView={reduce ? {} : { opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.25 }}
+            {...fadeUp}
             transition={{ duration: 0.35 }}
-            className="rounded-2xl ring-1 ring-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md"
+            className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md"
           >
-            <h2 className="text-lg font-semibold">Explore por categoria</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Explore por categoria</h2>
             <ul className="mt-3 grid grid-cols-2 gap-2 text-sm">
               {[
                 { to: "/posts?cat=ciencia", label: "Ciência" },
@@ -261,13 +291,11 @@ const AboutPage = () => {
           </motion.div>
 
           <motion.div
-            initial={reduce ? {} : { opacity: 0, y: 10 }}
-            whileInView={reduce ? {} : { opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.25 }}
+            {...fadeUp}
             transition={{ duration: 0.35 }}
-            className="lg:col-span-2 rounded-2xl ring-1 ring-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md"
+            className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md"
           >
-            <h2 className="text-lg font-semibold">Assine a newsletter</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Assine a newsletter</h2>
             <p className="mt-2 text-slate-700">
               Receba um resumo diário com os principais destaques. Sem spam — só o essencial.
             </p>
@@ -291,7 +319,8 @@ const AboutPage = () => {
               <motion.button
                 type="submit"
                 whileTap={reduce ? {} : { scale: 0.98 }}
-                className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-black text-white shadow-sm hover:shadow-md hover:bg-black/90 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 px-5 py-3 text-sm font-medium"
+                className="inline-flex items-center justify-center rounded-xl border border-transparent px-5 py-3 text-sm font-medium text-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40"
+                style={{ background: "linear-gradient(90deg, #2563eb 0%, #06b6d4 100%)" }}
               >
                 Assinar newsletter
               </motion.button>
@@ -300,8 +329,8 @@ const AboutPage = () => {
         </section>
 
         {/* FAQ */}
-        <section className="rounded-2xl ring-1 ring-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md">
-          <h2 className="text-xl md:text-2xl font-semibold tracking-tight">Perguntas frequentes</h2>
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md">
+          <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-slate-900">Perguntas frequentes</h2>
           <div className="mt-4 divide-y divide-slate-200">
             {[
               {
@@ -323,7 +352,7 @@ const AboutPage = () => {
             ].map((f, i) => (
               <details key={i} className="group py-3">
                 <summary className="flex items-center justify-between cursor-pointer list-none">
-                  <span className="font-medium">{f.q}</span>
+                  <span className="font-medium text-slate-900">{f.q}</span>
                   <span className="ml-4 text-slate-400 group-open:rotate-180 transition-transform">⌄</span>
                 </summary>
                 <p className="mt-2 text-sm text-slate-700">{f.a}</p>

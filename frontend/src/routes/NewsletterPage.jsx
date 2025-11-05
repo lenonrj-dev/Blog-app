@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 
@@ -7,12 +7,21 @@ export default function NewsletterPage() {
   const reduce = useReducedMotion();
   const [status, setStatus] = useState("idle"); // idle | loading | success | error
   const [msg, setMsg] = useState("");
+  const formRef = useRef(null);
 
   const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
+  const GRADIENT = "linear-gradient(90deg,#2563EB 0%,#06B6D4 100%)"; // azul → ciano
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const form = new FormData(e.currentTarget);
+
+    const formEl = e.currentTarget;
+    const form = new FormData(formEl);
+
+    // Honeypot contra bots
+    const trap = String(form.get("website") || "").trim();
+    if (trap) return; // ignora envios de bots
+
     const email = String(form.get("email") || "").trim();
     const name = String(form.get("name") || "").trim();
     const frequency = String(form.get("frequency") || "semanal").trim();
@@ -25,12 +34,15 @@ export default function NewsletterPage() {
     if (!emailOk || !consent) {
       setStatus("error");
       setMsg("Informe um e-mail válido e aceite os termos de consentimento.");
+      // sinaliza campo inválido
+      formEl.querySelector('#email')?.setAttribute('aria-invalid', 'true');
       return;
     }
 
     try {
       setStatus("loading");
       setMsg("");
+      formEl.querySelector('#email')?.setAttribute('aria-invalid', 'false');
 
       const payload = { name, email, frequency, topics, notes, consent };
       const url = `${API.replace(/\/$/, "")}/newsletter/subscribe`;
@@ -47,7 +59,7 @@ export default function NewsletterPage() {
       );
 
       // limpa o formulário, mas mantém feedback
-      e.currentTarget.reset();
+      formEl.reset();
     } catch (err) {
       setStatus("error");
       setMsg(
@@ -66,8 +78,19 @@ export default function NewsletterPage() {
         transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
       };
 
+  const statusClasses =
+    status === "error"
+      ? "text-red-600"
+      : status === "success"
+      ? "text-emerald-700"
+      : "text-neutral-600";
+
   return (
-    <main id="conteudo" className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 bg-white text-black">
+    <main
+      id="conteudo"
+      className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 bg-white text-black overflow-x-clip"
+      aria-label="Página de assinatura da newsletter"
+    >
       {/* Breadcrumbs */}
       <nav aria-label="Trilha de navegação" className="mb-6 text-sm">
         <ol className="flex items-center gap-2 text-neutral-700">
@@ -79,8 +102,12 @@ export default function NewsletterPage() {
               Início
             </Link>
           </li>
-          <li aria-hidden="true" className="text-neutral-400">•</li>
-          <li aria-current="page" className="text-neutral-900 font-medium">Newsletter</li>
+          <li aria-hidden="true" className="text-neutral-400">
+            •
+          </li>
+          <li aria-current="page" className="text-neutral-900 font-medium">
+            Newsletter
+          </li>
         </ol>
       </nav>
 
@@ -91,20 +118,26 @@ export default function NewsletterPage() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "WebPage",
-            name: "Newsletter — SYN Blog",
+            name: "Newsletter — AUX Blog",
             description:
-              "Assine a newsletter do SYN Blog e receba curadoria semanal de notícias com análise, contexto e links verificados.",
+              "Assine a newsletter do AUX Blog e receba curadoria semanal de notícias com análise, contexto e links verificados.",
             breadcrumb: {
               "@type": "BreadcrumbList",
               itemListElement: [
-                { "@type": "ListItem", position: 1, name: "Início", item: typeof window !== "undefined" ? window.location.origin : "" },
+                {
+                  "@type": "ListItem",
+                  position: 1,
+                  name: "Início",
+                  item:
+                    typeof window !== "undefined" ? window.location.origin : "",
+                },
                 { "@type": "ListItem", position: 2, name: "Newsletter" },
               ],
             },
             potentialAction: {
               "@type": "SubscribeAction",
               target: typeof window !== "undefined" ? window.location.href : "",
-              name: "Assinar newsletter do SYN Blog",
+              name: "Assinar newsletter do AUX Blog",
             },
           }),
         }}
@@ -112,8 +145,15 @@ export default function NewsletterPage() {
 
       {/* Hero */}
       <header className="mb-6 md:mb-10 max-w-3xl">
-        <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-neutral-900">
-          Assine a newsletter do SYN — notícias essenciais, contexto claro.
+        <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-neutral-900">
+          Assine a newsletter do AUX —
+          <span
+            className="ml-1 bg-clip-text text-transparent"
+            style={{ backgroundImage: GRADIENT }}
+          >
+            notícias essenciais
+          </span>
+          , contexto claro.
         </h1>
         <p className="mt-3 text-neutral-700 leading-relaxed">
           Receba um resumo confiável e direto ao ponto com os principais destaques do Brasil e do mundo. Sem spam,
@@ -129,14 +169,32 @@ export default function NewsletterPage() {
           aria-labelledby="titulo-assinar"
           className="lg:col-span-2 rounded-2xl ring-1 ring-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md"
         >
-          <h2 id="titulo-assinar" className="text-xl font-semibold text-neutral-900">Quero receber por e-mail</h2>
-          <p className="mt-1 text-sm text-neutral-600">
-            Campos marcados com * são obrigatórios.
-          </p>
+          <h2 id="titulo-assinar" className="text-xl font-semibold text-neutral-900">
+            Quero receber por e-mail
+          </h2>
+          <p className="mt-1 text-sm text-neutral-600">Campos marcados com * são obrigatórios.</p>
 
-          <form onSubmit={handleSubmit} noValidate className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            <div className="md:col-span-1">
-              <label htmlFor="nome" className="block text-sm font-medium text-neutral-900">Nome</label>
+          <form
+            ref={formRef}
+            onSubmit={handleSubmit}
+            noValidate
+            className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6"
+            aria-busy={status === "loading"}
+          >
+            {/* honeypot invisível para bots */}
+            <input
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              className="hidden"
+              aria-hidden="true"
+            />
+
+            <div className="md:col-span-1 min-w-0">
+              <label htmlFor="nome" className="block text-sm font-medium text-neutral-900">
+                Nome
+              </label>
               <input
                 id="nome"
                 name="name"
@@ -144,11 +202,14 @@ export default function NewsletterPage() {
                 autoComplete="name"
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-base text-neutral-900 placeholder-neutral-400 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40"
                 placeholder="Seu nome (opcional)"
+                inputMode="text"
               />
             </div>
 
-            <div className="md:col-span-1">
-              <label htmlFor="email" className="block text-sm font-medium text-neutral-900">E-mail *</label>
+            <div className="md:col-span-1 min-w-0">
+              <label htmlFor="email" className="block text-sm font-medium text-neutral-900">
+                E-mail *
+              </label>
               <input
                 id="email"
                 name="email"
@@ -158,11 +219,17 @@ export default function NewsletterPage() {
                 required
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-base text-neutral-900 placeholder-neutral-400 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40"
                 placeholder="voce@exemplo.com"
+                aria-describedby="email-hint"
               />
+              <span id="email-hint" className="mt-1 block text-xs text-neutral-500">
+                Usaremos apenas para envio e métricas agregadas.
+              </span>
             </div>
 
-            <div className="md:col-span-1">
-              <label htmlFor="frequencia" className="block text-sm font-medium text-neutral-900">Frequência</label>
+            <div className="md:col-span-1 min-w-0">
+              <label htmlFor="frequencia" className="block text-sm font-medium text-neutral-900">
+                Frequência
+              </label>
               <select
                 id="frequencia"
                 name="frequency"
@@ -176,7 +243,9 @@ export default function NewsletterPage() {
             </div>
 
             <fieldset className="md:col-span-2">
-              <legend className="text-sm font-medium text-neutral-900">Temas de interesse</legend>
+              <legend className="text-sm font-medium text-neutral-900">
+                Temas de interesse
+              </legend>
               <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {[
                   ["ciencia", "Ciência"],
@@ -186,7 +255,10 @@ export default function NewsletterPage() {
                   ["marketing", "Marketing"],
                   ["ultimas", "Últimas notícias"],
                 ].map(([value, label]) => (
-                  <label key={value} className="inline-flex items-center gap-2 text-sm text-neutral-900">
+                  <label
+                    key={value}
+                    className="inline-flex items-center gap-2 text-sm text-neutral-900"
+                  >
                     <input
                       type="checkbox"
                       name="topics"
@@ -199,8 +271,10 @@ export default function NewsletterPage() {
               </div>
             </fieldset>
 
-            <div className="md:col-span-2">
-              <label htmlFor="observacoes" className="block text-sm font-medium text-neutral-900">Observações</label>
+            <div className="md:col-span-2 min-w-0">
+              <label htmlFor="observacoes" className="block text-sm font-medium text-neutral-900">
+                Observações
+              </label>
               <textarea
                 id="observacoes"
                 name="notes"
@@ -219,8 +293,15 @@ export default function NewsletterPage() {
                   className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-700 focus-visible:ring-blue-600/40"
                 />
                 <span>
-                  Concordo em receber e-mails do SYN Blog e entendo que posso cancelar a assinatura a qualquer momento.
-                  Li e aceito a <Link to="/privacidade" className="text-blue-700 hover:underline underline-offset-2">Política de Privacidade</Link>.
+                  Concordo em receber e-mails do AUX Blog e entendo que posso cancelar a assinatura a qualquer momento.
+                  Li e aceito a {" "}
+                  <Link
+                    to="/privacidade"
+                    className="text-blue-700 hover:underline underline-offset-2"
+                  >
+                    Política de Privacidade
+                  </Link>
+                  .
                 </span>
               </label>
               <p id="lgpd-hint" className="text-xs text-neutral-600">
@@ -228,28 +309,39 @@ export default function NewsletterPage() {
               </p>
             </div>
 
-            <div className="md:col-span-2 flex items-center gap-3">
+            <div className="md:col-span-2 flex flex-wrap items-center gap-3">
               <motion.button
                 type="submit"
                 whileTap={reduce ? {} : { scale: 0.98 }}
                 disabled={status === "loading"}
-                className="inline-flex items-center justify-center rounded-xl border border-transparent bg-blue-600 text-white shadow-sm hover:bg-blue-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 px-5 py-3.5 text-sm font-medium cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center rounded-xl border border-slate-200 text-white shadow-sm active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 px-5 py-3.5 text-sm font-medium cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 aria-describedby="lgpd-hint"
+                style={{ backgroundImage: GRADIENT }}
               >
                 {status === "loading" ? "Enviando..." : "Assinar newsletter"}
               </motion.button>
               <span className="text-sm text-neutral-600">Sem spam. Cancelamento com um clique.</span>
             </div>
 
-            <div role="status" aria-live="polite" className={`md:col-span-2 text-sm ${status === "error" ? "text-red-600" : "text-green-700"}`}>
+            <div
+              role="status"
+              aria-live="polite"
+              className={`md:col-span-2 text-sm ${statusClasses}`}
+            >
               {msg}
             </div>
           </form>
         </motion.section>
 
         {/* Benefícios / Conteúdo auxiliar */}
-        <motion.aside {...container} aria-label="Por que assinar" className="rounded-2xl ring-1 ring-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md">
-          <h2 className="text-base font-semibold text-neutral-900">Por que a newsletter da SYN é diferente?</h2>
+        <motion.aside
+          {...container}
+          aria-label="Por que assinar"
+          className="rounded-2xl ring-1 ring-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md"
+        >
+          <h2 className="text-base font-semibold text-neutral-900">
+            Por que a newsletter da AUX é diferente?
+          </h2>
           <ul className="mt-3 space-y-2 text-neutral-800">
             <li>• Curadoria humana com critérios editoriais claros.</li>
             <li>• Contexto e links oficiais para leitura aprofundada.</li>
@@ -260,8 +352,16 @@ export default function NewsletterPage() {
           <div className="mt-6">
             <h3 className="text-sm font-semibold text-neutral-900">O que você vai receber</h3>
             <div className="mt-3 grid grid-cols-1 gap-3">
-              {["Resumo diário ou semanal","Análises rápidas do que mudou","Agenda do dia e alertas de última hora","Seleção de leituras recomendadas"].map((t) => (
-                <div key={t} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+              {[
+                "Resumo diário ou semanal",
+                "Análises rápidas do que mudou",
+                "Agenda do dia e alertas de última hora",
+                "Seleção de leituras recomendadas",
+              ].map((t) => (
+                <div
+                  key={t}
+                  className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+                >
                   <p className="text-sm text-neutral-800">{t}</p>
                 </div>
               ))}
@@ -269,7 +369,9 @@ export default function NewsletterPage() {
           </div>
 
           <div className="mt-6">
-            <h3 className="text-sm font-semibold text-neutral-900">Compromissos editoriais</h3>
+            <h3 className="text-sm font-semibold text-neutral-900">
+              Compromissos editoriais
+            </h3>
             <p className="mt-2 text-sm text-neutral-700">
               Nossas decisões seguem política editorial própria, critérios de relevância pública e checagem de fatos.
               Em caso de erro, publicamos correções de forma visível.
@@ -279,14 +381,32 @@ export default function NewsletterPage() {
       </div>
 
       {/* FAQ */}
-      <motion.section {...container} aria-labelledby="faq" className="mt-10 rounded-2xl ring-1 ring-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md">
-        <h2 id="faq" className="text-xl font-semibold text-neutral-900">Perguntas Frequentes</h2>
+      <motion.section
+        {...container}
+        aria-labelledby="faq"
+        className="mt-10 rounded-2xl ring-1 ring-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md"
+      >
+        <h2 id="faq" className="text-xl font-semibold text-neutral-900">
+          Perguntas Frequentes
+        </h2>
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {[
-            ["Posso cancelar quando quiser?", "Sim. Cada e-mail traz um link de descadastro imediato."],
-            ["Com que frequência vocês enviam?", "Oferecemos diária, semanal e resumo do fim de semana — você escolhe."],
-            ["Vão compartilhar meu e-mail?", "Não. Usamos apenas para envio da newsletter e métricas agregadas."],
-            ["Receberei publicidade?", "Podemos incluir patrocínios sinalizados. Conteúdo editorial é sempre independente."],
+            [
+              "Posso cancelar quando quiser?",
+              "Sim. Cada e-mail traz um link de descadastro imediato.",
+            ],
+            [
+              "Com que frequência vocês enviam?",
+              "Oferecemos diária, semanal e resumo do fim de semana — você escolhe.",
+            ],
+            [
+              "Vão compartilhar meu e-mail?",
+              "Não. Usamos apenas para envio da newsletter e métricas agregadas.",
+            ],
+            [
+              "Receberei publicidade?",
+              "Podemos incluir patrocínios sinalizados. Conteúdo editorial é sempre independente.",
+            ],
           ].map(([q, a]) => (
             <details key={q} className="group rounded-xl border border-slate-200 bg-white p-3">
               <summary className="cursor-pointer select-none text-neutral-900 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 rounded">
@@ -306,10 +426,41 @@ export default function NewsletterPage() {
             "@context": "https://schema.org",
             "@type": "FAQPage",
             mainEntity: [
-              { "@type": "Question", name: "Posso cancelar quando quiser?", acceptedAnswer: { "@type": "Answer", text: "Sim. Cada e-mail traz um link de descadastro imediato." } },
-              { "@type": "Question", name: "Com que frequência vocês enviam?", acceptedAnswer: { "@type": "Answer", text: "Oferecemos diária, semanal e resumo do fim de semana — você escolhe." } },
-              { "@type": "Question", name: "Vão compartilhar meu e-mail?", acceptedAnswer: { "@type": "Answer", text: "Não. Usamos apenas para envio da newsletter e métricas agregadas." } },
-              { "@type": "Question", name: "Receberei publicidade?", acceptedAnswer: { "@type": "Answer", text: "Podemos incluir patrocínios sinalizados. Conteúdo editorial é sempre independente." } },
+              {
+                "@type": "Question",
+                name: "Posso cancelar quando quiser?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: "Sim. Cada e-mail traz um link de descadastro imediato.",
+                },
+              },
+              {
+                "@type": "Question",
+                name: "Com que frequência vocês enviam?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text:
+                    "Oferecemos diária, semanal e resumo do fim de semana — você escolhe.",
+                },
+              },
+              {
+                "@type": "Question",
+                name: "Vão compartilhar meu e-mail?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text:
+                    "Não. Usamos apenas para envio da newsletter e métricas agregadas.",
+                },
+              },
+              {
+                "@type": "Question",
+                name: "Receberei publicidade?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text:
+                    "Podemos incluir patrocínios sinalizados. Conteúdo editorial é sempre independente.",
+                },
+              },
             ],
           }),
         }}

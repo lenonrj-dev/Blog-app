@@ -12,14 +12,11 @@ const Comment = ({ comment, postId }) => {
   const prefersReduced = useReducedMotion();
   const queryClient = useQueryClient();
 
-  // Somente admin pode excluir
   const isAdmin = user?.publicMetadata?.role === "admin";
 
-  // Fallbacks seguros
   const authorName = comment?.user?.username || comment?.username || "Usuário";
   const avatarUrl = comment?.user?.img || comment?.userImage || comment?.user?.imageUrl || null;
 
-  // Datas seguras
   const createdDate = comment?.createdAt ? new Date(comment.createdAt) : null;
   const createdISO = createdDate && !isNaN(+createdDate) ? createdDate.toISOString() : undefined;
   const createdHuman =
@@ -27,7 +24,7 @@ const Comment = ({ comment, postId }) => {
       ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(createdDate)
       : undefined;
 
-  const mutation = useMutation({
+  const deleteMutation = useMutation({
     mutationFn: async () => {
       const token = await getToken();
       return axios.delete(`${import.meta.env.VITE_API_URL}/comments/${comment._id}`, {
@@ -44,8 +41,8 @@ const Comment = ({ comment, postId }) => {
   });
 
   const handleDelete = () => {
-    if (!isAdmin || mutation.isPending) return; // garante apenas admin
-    mutation.mutate();
+    if (!isAdmin || deleteMutation.isPending) return;
+    deleteMutation.mutate();
   };
 
   return (
@@ -56,7 +53,7 @@ const Comment = ({ comment, postId }) => {
       whileInView={prefersReduced ? {} : { opacity: 1, y: 0, filter: "none" }}
       viewport={{ once: true, margin: "-20%" }}
       transition={{ duration: 0.32, ease: "easeOut" }}
-      className="group p-4 md:p-6 bg-white rounded-2xl mb-8 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300"
+      className="group p-4 md:p-6 bg-white rounded-2xl mb-8 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-x-clip"
       aria-label={`Comentário de ${authorName}`}
     >
       <div className="flex flex-wrap items-center gap-4 md:gap-6">
@@ -98,24 +95,24 @@ const Comment = ({ comment, postId }) => {
             role="button"
             tabIndex={0}
             aria-label={`Excluir comentário de ${authorName}`}
-            aria-disabled={mutation.isPending}
+            aria-disabled={deleteMutation.isPending}
             className={`ml-auto inline-flex items-center h-9 px-3 rounded-lg text-xs font-medium transition ${
-              mutation.isPending
+              deleteMutation.isPending
                 ? "text-red-300 opacity-60 cursor-not-allowed"
                 : "text-red-600 hover:text-red-700 active:opacity-90 cursor-pointer"
             } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30`}
             onClick={handleDelete}
             onKeyDown={(e) => {
-              if ((e.key === "Enter" || e.key === " ") && !mutation.isPending) handleDelete();
+              if ((e.key === "Enter" || e.key === " ") && !deleteMutation.isPending) handleDelete();
             }}
           >
-            Excluir{mutation.isPending && <span className="ml-1">(em andamento)</span>}
+            Excluir{deleteMutation.isPending && <span className="ml-1">(em andamento)</span>}
           </motion.span>
         )}
       </div>
 
       <div className="mt-4">
-        <p className="leading-relaxed text-slate-900" itemProp="text">
+        <p className="leading-relaxed text-slate-900 break-words [overflow-wrap:anywhere]" itemProp="text">
           {comment?.desc?.trim() ? comment.desc : "[sem texto]"}
         </p>
       </div>

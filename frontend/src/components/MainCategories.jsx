@@ -1,71 +1,139 @@
-import { Link } from "react-router-dom";
-import Search from "./Search";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
-const MainCategories = () => {
+/**
+ * MainCategories
+ * - Mantém busca que redireciona para /posts preservando ?cat
+ * - Pills de categoria funcionam inline quando a rota atual usar esse componente na Home
+ * - Tema atualizado: gradiente azul → ciano para botões e seleção
+ */
+const MainCategories = ({ inlineFilter = true }) => {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // estado do campo de busca sincronizado com query ?search
+  const initialTerm = searchParams.get("search") || "";
+  const [term, setTerm] = useState(initialTerm);
+  useEffect(() => setTerm(initialTerm), [initialTerm]);
+
+  // categoria ativa (para estilizar a “pill” selecionada)
+  const currentCat = searchParams.get("cat") || "";
+
+  // categorias (mesmas chaves do backend)
+  const categories = useMemo(
+    () => [
+      { to: "/posts", key: "", label: "Todas" },
+      { to: "/posts?cat=ciencia", key: "ciencia", label: "Ciência" },
+      { to: "/posts?cat=politica", key: "politica", label: "Política" },
+      { to: "/posts?cat=negocios", key: "negocios", label: "Negócios" },
+      { to: "/posts?cat=tecnologia", key: "tecnologia", label: "Tecnologia" },
+      { to: "/posts?cat=marketing", key: "marketing", label: "Marketing" },
+    ],
+    []
+  );
+
+  const onSubmit = (e) => {
+    e.preventDefault();
+    const q = term.trim();
+    const cat = currentCat ? `cat=${encodeURIComponent(currentCat)}&` : "";
+    navigate(`/posts?${cat}${q ? `search=${encodeURIComponent(q)}` : ""}`);
+  };
+
+  const handleSelectCatInline = (key) => {
+    if (!inlineFilter) return;
+    const next = new URLSearchParams(searchParams);
+    if (key) next.set("cat", key); else next.delete("cat");
+    setSearchParams(next, { replace: true });
+  };
+
   return (
-    <nav
-      aria-label="Categorias principais"
-      className="hidden md:flex items-center justify-center gap-8 rounded-3xl xl:rounded-full ring-1 ring-slate-200 bg-white p-4 shadow-sm hover:shadow-md"
-    >
-      <div className="flex-1 flex items-center justify-between flex-wrap gap-2">
-        <Link
-          to="/posts"
-          className="inline-flex items-center justify-center rounded-xl border border-transparent bg-black no-underline shadow-sm hover:shadow-md hover:bg-black/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 px-4 py-2 text-sm font-medium cursor-pointer !text-white"
-          aria-label="Ver todas as matérias"
-        >
-          Todas as matérias
-        </Link>
-
-        <Link
-          to="/posts?cat=ciencia"
-          className="inline-flex items-center justify-center rounded-xl border ring-1 ring-slate-200 bg-white no-underline hover:bg-slate-50 hover:ring-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 px-4 py-2 text-sm md:text-base font-medium cursor-pointer !text-slate-900"
-          aria-label="Ver matérias de Ciência"
-        >
-          Ciência
-        </Link>
-
-        <Link
-          to="/posts?cat=politica"
-          className="inline-flex items-center justify-center rounded-xl border ring-1 ring-slate-200 bg-white no-underline hover:bg-slate-50 hover:ring-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 px-4 py-2 text-sm md:text-base font-medium cursor-pointer !text-slate-900"
-          aria-label="Ver matérias de Política"
-        >
-          Política
-        </Link>
-
-        <Link
-          to="/posts?cat=negocios"
-          className="inline-flex items-center justify-center rounded-xl border ring-1 ring-slate-200 bg-white no-underline hover:bg-slate-50 hover:ring-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 px-4 py-2 text-sm md:text-base font-medium cursor-pointer !text-slate-900"
-          aria-label="Ver matérias de Negócios"
-        >
-          Negócios
-        </Link>
-
-        <Link
-          to="/posts?cat=tecnologia"
-          className="inline-flex items-center justify-center rounded-xl border ring-1 ring-slate-200 bg-white no-underline hover:bg-slate-50 hover:ring-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 px-4 py-2 text-sm md:text-base font-medium cursor-pointer !text-slate-900"
-          aria-label="Ver matérias de Tecnologia"
-        >
-          Tecnologia
-        </Link>
-
-        <Link
-          to="/posts?cat=marketing"
-          className="inline-flex items-center justify-center rounded-xl border ring-1 ring-slate-200 bg-white no-underline hover:bg-slate-50 hover:ring-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 px-4 py-2 text-sm md:text-base font-medium cursor-pointer !text-slate-900"
-          aria-label="Ver matérias de Marketing"
-        >
-          Marketing
-        </Link>
-      </div>
-
-      <span className="text-xl font-medium select-none text-slate-300" aria-hidden="true">
-        |
-      </span>
-
-      <div className="w-full max-w-sm">
-        <label htmlFor="busca-principal" className="sr-only">
+    <nav aria-label="Categorias e busca da página inicial" className="w-full">
+      {/* Searchbar maior com botão ao lado */}
+      <form
+        onSubmit={onSubmit}
+        className="mx-auto w-full max-w-2xl rounded-2xl ring-1 ring-slate-200 bg-white p-1 shadow-sm"
+      >
+        <label htmlFor="busca-home" className="sr-only">
           Buscar matérias
         </label>
-        <Search id="busca-principal" />
+        <div className="grid grid-cols-[1fr_auto] items-center gap-2">
+          <input
+            id="busca-home"
+            type="search"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            placeholder="Buscar matérias"
+            className="h-12 w-full rounded-xl border-0 bg-transparent px-4 text-sm md:text-base text-slate-900 placeholder-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30"
+            aria-label="Campo de busca"
+          />
+          <button
+            type="submit"
+            className="h-12 min-w-[110px] rounded-xl px-4 text-sm md:text-base font-semibold text-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/40 active:scale-[0.98]"
+            style={{ background: "linear-gradient(90deg,#2563eb 0%,#06b6d4 100%)" }}
+          >
+            Buscar
+          </button>
+        </div>
+      </form>
+
+      {/* Linha de pills das categorias */}
+      <div
+        className="mx-auto mr-50 mt-8 flex w-full max-w-2xl flex-wrap items-center gap-2"
+        role="navigation"
+        aria-label="Categorias"
+      >
+        {categories.map(({ to, key, label }) => {
+          const active = (currentCat || "") === key;
+          const isAll = key === "" && currentCat === "";
+          const selected = active || isAll;
+
+          const classBase =
+            "px-3 py-1.5 rounded-full text-sm transition focus-visible:outline-none focus-visible:ring-2";
+
+          if (inlineFilter) {
+            return (
+              <button
+                key={key || "todas"}
+                type="button"
+                onClick={() => handleSelectCatInline(key)}
+                className={
+                  selected
+                    ? `${classBase} text-white shadow-sm focus-visible:ring-cyan-500/40`
+                    : `${classBase} text-slate-700 ring-1 ring-slate-200 hover:ring-cyan-400 focus-visible:ring-cyan-500/40`
+                }
+                style={
+                  selected
+                    ? { background: "linear-gradient(90deg,#2563eb 0%,#06b6d4 100%)" }
+                    : undefined
+                }
+                aria-pressed={selected}
+              >
+                {label}
+              </button>
+            );
+          }
+
+          // fallback: navegação tradicional
+          return (
+            <Link
+              key={key || "todas"}
+              to={to}
+              className={
+                selected
+                  ? `${classBase} text-white shadow-sm focus-visible:ring-cyan-500/40`
+                  : `${classBase} text-slate-700 ring-1 ring-slate-200 hover:ring-cyan-400 focus-visible:ring-cyan-500/40`
+              }
+              style={
+                selected
+                  ? { background: "linear-gradient(90deg,#2563eb 0%,#06b6d4 100%)" }
+                  : undefined
+              }
+              aria-current={selected ? "true" : undefined}
+            >
+              {label}
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );

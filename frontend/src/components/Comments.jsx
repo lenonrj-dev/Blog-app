@@ -14,17 +14,17 @@ const fetchComments = async (postId) => {
 };
 
 const Comments = ({ postId }) => {
+  // Hooks fixos (ordem estável)
   const { user } = useUser();
   const { getToken } = useAuth();
   const prefersReduced = useReducedMotion();
+  const queryClient = useQueryClient();
 
   const { isPending, isError, data = [] } = useQuery({
     queryKey: ["comments", postId],
     queryFn: () => fetchComments(postId),
     placeholderData: [],
   });
-
-  const queryClient = useQueryClient();
 
   const mutation = useMutation({
     mutationFn: async (newComment) => {
@@ -49,6 +49,22 @@ const Comments = ({ postId }) => {
   };
   const stagger = { animate: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } } };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!user) {
+      toast.info("Entre para comentar.");
+      return;
+    }
+    const formData = new FormData(e.currentTarget);
+    const desc = formData.get("desc")?.trim();
+    if (!desc) {
+      toast.info("Escreva um comentário.");
+      return;
+    }
+    mutation.mutate({ desc });
+    e.currentTarget.reset();
+  };
+
   return (
     <motion.section
       id="comentarios"
@@ -59,7 +75,7 @@ const Comments = ({ postId }) => {
       whileInView={prefersReduced ? {} : { opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.2 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      className="flex flex-col gap-6 lg:w-3/5 mb-12 rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md"
+      className="flex flex-col gap-6 w-full rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm hover:shadow-md overflow-x-clip"
     >
       <h2 id="titulo-comentarios" className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
         Comentários
@@ -68,42 +84,49 @@ const Comments = ({ postId }) => {
         Participe da conversa com opiniões respeitosas e objetivas. Conteúdos ofensivos podem ser removidos.
       </p>
 
-      <motion.form
-        onSubmit={handleSubmit}
-        aria-label="Formulário de comentários"
-        aria-busy={mutation.isPending}
-        initial={prefersReduced ? {} : { opacity: 0, y: 8 }}
-        whileInView={prefersReduced ? {} : { opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.3 }}
-        transition={{ duration: 0.32, ease: "easeOut" }}
-        className="flex items-start md:items-center justify-between gap-4 md:gap-6 w-full"
-      >
-        <div className="flex-1">
-          <label htmlFor="comentario-desc" className="sr-only">
-            Escreva um comentário
-          </label>
-          <textarea
-            id="comentario-desc"
-            name="desc"
-            placeholder="Escreva um comentário..."
-            aria-describedby="comentarios-dica"
-            className="w-full min-h-28 resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm md:text-base placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/40"
-          />
-          <span id="comentarios-dica" className="mt-2 block text-xs text-slate-500">
-            Dica: mantenha o respeito e evite links suspeitos.
-          </span>
-        </div>
-        <motion.button
-          type="submit"
-          whileHover={prefersReduced ? {} : { y: -1, scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          aria-disabled={mutation.isPending}
-          disabled={mutation.isPending}
-          className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-blue-600 text-white no-underline shadow-sm hover:shadow-md hover:bg-blue-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 disabled:opacity-60 disabled:cursor-not-allowed px-4 py-3 text-sm font-medium"
+      {/* Formulário somente para usuários logados */}
+      {user ? (
+        <motion.form
+          onSubmit={handleSubmit}
+          aria-label="Formulário de comentários"
+          aria-busy={mutation.isPending}
+          initial={prefersReduced ? {} : { opacity: 0, y: 8 }}
+          whileInView={prefersReduced ? {} : { opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.32, ease: "easeOut" }}
+          className="flex items-start md:items-center justify-between gap-4 md:gap-6 w-full"
         >
-          {mutation.isPending ? "Enviando..." : "Enviar"}
-        </motion.button>
-      </motion.form>
+          <div className="flex-1">
+            <label htmlFor="comentario-desc" className="sr-only">
+              Escreva um comentário
+            </label>
+            <textarea
+              id="comentario-desc"
+              name="desc"
+              placeholder="Escreva um comentário..."
+              aria-describedby="comentarios-dica"
+              className="w-full min-h-28 resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm md:text-base placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/40 break-words [overflow-wrap:anywhere]"
+            />
+            <span id="comentarios-dica" className="mt-2 block text-xs text-slate-500">
+              Dica: mantenha o respeito e evite links suspeitos.
+            </span>
+          </div>
+          <motion.button
+            type="submit"
+            whileHover={prefersReduced ? {} : { y: -1, scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            aria-disabled={mutation.isPending}
+            disabled={mutation.isPending}
+            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-blue-600 text-white no-underline shadow-sm hover:shadow-md hover:bg-blue-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 disabled:opacity-60 disabled:cursor-not-allowed px-4 py-3 text-sm font-medium"
+          >
+            {mutation.isPending ? "Enviando..." : "Enviar"}
+          </motion.button>
+        </motion.form>
+      ) : (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+          Entre para comentar.
+        </div>
+      )}
 
       <div role="status" aria-live="polite" className="text-sm text-slate-500">
         {isPending && "Carregando..."}
@@ -151,20 +174,6 @@ const Comments = ({ postId }) => {
       )}
     </motion.section>
   );
-
-  function handleSubmit(e) {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const desc = formData.get("desc")?.trim();
-
-    if (!desc) {
-      toast.info("Escreva um comentário.");
-      return;
-    }
-
-    mutation.mutate({ desc });
-    e.target.reset();
-  }
 };
 
 export default Comments;

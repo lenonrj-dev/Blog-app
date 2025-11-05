@@ -15,6 +15,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import AboutPage from "./routes/AboutPage.jsx";
 import NewsletterPage from "./routes/NewsletterPage.jsx";
+import PrivacyPolicy from "./routes/PrivacyPolicy.jsx";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,10 @@ const router = createBrowserRouter([
       {
         path: "/register",
         element: <RegisterPage />,
+      },
+      {
+        path: "/privacidade",
+        element: <PrivacyPolicy />,
       },
     ],
   },

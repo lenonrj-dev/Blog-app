@@ -1,15 +1,32 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "./Image";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
 import { motion, useReducedMotion } from "framer-motion";
 
-const Navbar = () => {
+export default function Navbar() {
   const [open, setOpen] = useState(false);
   const prefersReduced = useReducedMotion();
+  const location = useLocation();
+
+  // Fecha o menu em mudanças de rota e bloqueia scroll do body quando aberto
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    const el = document.documentElement;
+    if (open) {
+      el.classList.add("overflow-hidden");
+    } else {
+      el.classList.remove("overflow-hidden");
+    }
+    return () => el.classList.remove("overflow-hidden");
+  }, [open]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/70 supports-[backdrop-filter]:backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
+      {/* Skip link */}
       <a
         href="#conteudo"
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:shadow focus:outline-none focus:ring-2 focus:ring-slate-900/20"
@@ -17,21 +34,31 @@ const Navbar = () => {
         Pular para o conteúdo
       </a>
 
+      {/* Navbar container (sem overlays/blur) */}
       <nav
         aria-label="Navegação principal"
-        className="relative max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-20 flex items-center justify-between text-black after:pointer-events-none after:absolute after:inset-0 after:bg-gradient-to-b after:from-white/0 after:via-white/60 after:to-white"
+        className="relative max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-20 flex items-center justify-between text-black"
       >
-        <motion.div whileHover={prefersReduced ? {} : { scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex items-center">
+        {/* Brand */}
+        <motion.div whileHover={prefersReduced ? {} : { scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex items-center min-w-0">
           <Link
             to="/"
-            className="flex items-center gap-3 md:gap-4 text-2xl font-bold text-black hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 rounded-lg"
+            className="flex items-center gap-3 md:gap-4 text-2xl font-bold text-black hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 rounded-lg whitespace-nowrap select-none"
             aria-label="Ir para a página inicial"
           >
-            <Image src="logo.png" alt="Logo SYN" w={32} h={32} />
-            <span className="leading-none">SYN</span>
+            {/* Se usar public/, prefira caminho absoluto "/logo.svg" */}
+            <img
+              src="/logo.svg"
+              alt="Logo Ateliux"
+              width={32}
+              height={32}
+              className="h-8 w-8 object-contain shrink-0 select-none"
+            />
+            <span className="leading-none text-black">AX</span>
           </Link>
         </motion.div>
 
+        {/* Mobile hamburger */}
         <div className="md:hidden">
           <div
             role="button"
@@ -48,20 +75,27 @@ const Navbar = () => {
           >
             <span className="sr-only">{open ? "Fechar menu" : "Abrir menu"}</span>
             <div className="flex flex-col gap-[5.4px]">
-              <div aria-hidden="true" className={`h-[3px] rounded-md w-6 bg-black origin-left transition-all ease-in-out ${open && "rotate-45"}`}></div>
-              <div aria-hidden="true" className={`h-[3px] rounded-md w-6 bg-black transition-all ease-in-out ${open && "opacity-0"}`}></div>
-              <div aria-hidden="true" className={`h-[3px] rounded-md w-6 bg-black origin-left transition-all ease-in-out ${open && "-rotate-45"}`}></div>
+              <div aria-hidden="true" className={`h-[3px] rounded-md w-6 bg-black origin-left transition-all ease-in-out ${open ? "rotate-45" : ""}`}></div>
+              <div aria-hidden="true" className={`h-[3px] rounded-md w-6 bg-black transition-all ease-in-out ${open ? "opacity-0" : ""}`}></div>
+              <div aria-hidden="true" className={`h-[3px] rounded-md w-6 bg-black origin-left transition-all ease-in-out ${open ? "-rotate-45" : ""}`}></div>
             </div>
           </div>
 
+          {/* Painel mobile: corrige vazamento usando translate-x em vez de right + inset */}
           <motion.div
             id="menu-mobile"
             role="menu"
             aria-hidden={!open}
             initial={false}
-            animate={prefersReduced ? {} : { opacity: open ? 1 : 0.6, scale: open ? 1 : 0.98 }}
+            animate={
+              prefersReduced
+                ? {}
+                : { opacity: open ? 1 : 1, scale: 1 } // só usamos a transição de translate via classes
+            }
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className={`w-full h-[calc(100vh-4rem)] md:h-[calc(100vh-5rem)] bg-white flex flex-col items-center justify-center gap-8 font-medium text-lg fixed inset-x-0 top-16 md:top-20 z-40 border-t border-slate-200 shadow-sm transition-all ease-in-out ${open ? "right-0" : "-right-[100%]"}`}
+            className={`fixed left-0 right-0 top-16 md:top-20 h-[calc(100vh-4rem)] md:h-[calc(100vh-5rem)] bg-white flex flex-col items-center justify-center gap-8 font-medium text-lg z-40 border-t border-slate-200 shadow-sm transform transition-transform duration-200 ease-out ${
+              open ? "translate-x-0" : "translate-x-full pointer-events-none"
+            }`}
           >
             <motion.div whileTap={{ scale: 0.98 }}>
               <Link
@@ -95,7 +129,7 @@ const Navbar = () => {
             </motion.div>
             <motion.div whileTap={{ scale: 0.98 }}>
               <Link
-                to="/"
+                to="/sobre"
                 role="menuitem"
                 onClick={() => setOpen(false)}
                 className="inline-flex items-center h-10 px-3 rounded-lg text-black no-underline hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 active:opacity-90 cursor-pointer"
@@ -116,6 +150,7 @@ const Navbar = () => {
           </motion.div>
         </div>
 
+        {/* Desktop links */}
         <div className="hidden md:flex items-center gap-2 sm:gap-3 lg:gap-4 xl:gap-6 font-medium">
           <motion.div whileHover={prefersReduced ? {} : { y: -1 }} whileTap={{ scale: 0.98 }}>
             <Link
@@ -157,7 +192,7 @@ const Navbar = () => {
                   type="button"
                   className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-black text-white no-underline shadow-sm hover:shadow-md hover:bg-black/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 px-4 py-2 text-sm font-medium cursor-pointer"
                 >
-                  Entrar 👋
+                  Entrar
                 </button>
               </Link>
             </motion.div>
@@ -172,6 +207,4 @@ const Navbar = () => {
       </nav>
     </header>
   );
-};
-
-export default Navbar;
+}

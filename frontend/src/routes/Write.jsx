@@ -10,7 +10,9 @@ import Upload from "../components/Upload";
 import { motion, useReducedMotion } from "framer-motion";
 
 const Write = () => {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const isAdmin = isSignedIn && user?.publicMetadata?.role === "admin";
+
   const [value, setValue] = useState("");
   const [cover, setCover] = useState("");
   const [img, setImg] = useState("");
@@ -18,16 +20,34 @@ const Write = () => {
   const [progress, setProgress] = useState(0);
   const prefersReduced = useReducedMotion();
 
+  const navigate = useNavigate();
+  const { getToken } = useAuth();
+
+  // ✅ Gate de acesso: só ADMIN pode permanecer nesta página
   useEffect(() => {
-    img && setValue((prev) => prev + `<p><image src="${img.url}"/></p>`);
+    if (!isLoaded) return; // aguarda Clerk
+
+    if (!isSignedIn) {
+      // não logado → login
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    if (!isAdmin) {
+      // logado mas não é admin → volta para a home
+      toast.error("Acesso restrito — apenas administradores.");
+      navigate("/", { replace: true });
+    }
+  }, [isLoaded, isSignedIn, isAdmin, navigate]);
+
+  // Insere mídia no editor ao terminar upload
+  useEffect(() => {
+    if (img) setValue((prev) => prev + `<p><image src="${img.url}"/></p>`);
   }, [img]);
 
   useEffect(() => {
-    video && setValue((prev) => prev + `<p><iframe class="ql-video" src="${video.url}"/></p>`);
+    if (video) setValue((prev) => prev + `<p><iframe class="ql-video" src="${video.url}"/></p>`);
   }, [video]);
-
-  const navigate = useNavigate();
-  const { getToken } = useAuth();
 
   const mutation = useMutation({
     mutationFn: async (newPost) => {
@@ -45,18 +65,25 @@ const Write = () => {
     },
   });
 
+  // Estados de carregamento/redirect do gate
   if (!isLoaded) {
     return (
-      <div role="status" aria-live="polite" className="text-sm text-slate-600">
-        Carregando...
+      <div role="status" aria-live="polite" className="text-sm text-slate-600 p-6">
+        Carregando…
       </div>
     );
   }
-
-  if (isLoaded && !isSignedIn) {
+  if (!isSignedIn) {
     return (
-      <div role="status" aria-live="assertive" className="text-sm text-slate-800">
-        Você precisa entrar na conta.
+      <div role="status" aria-live="polite" className="text-sm text-slate-800 p-6">
+        Redirecionando para o login…
+      </div>
+    );
+  }
+  if (!isAdmin) {
+    return (
+      <div role="status" aria-live="assertive" className="text-sm text-slate-800 p-6">
+        Redirecionando…
       </div>
     );
   }
@@ -168,7 +195,7 @@ const Write = () => {
           </label>
           <textarea
             id="descricao"
-            className="w-full rounded-2xl ring-1 ring-slate-200 bg-white px-4 py-3 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/40"
+            className="w-full rounded-2xl ring-1 ring-slate-200 bg-white px-4 py-3 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40"
             name="desc"
             placeholder="Descrição curta"
             aria-label="Descrição curta"
