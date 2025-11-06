@@ -87,11 +87,7 @@ export default function Navbar() {
             role="menu"
             aria-hidden={!open}
             initial={false}
-            animate={
-              prefersReduced
-                ? {}
-                : { opacity: open ? 1 : 1, scale: 1 } // só usamos a transição de translate via classes
-            }
+            animate={prefersReduced ? {} : { opacity: 1, scale: 1 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
             className={`fixed left-0 right-0 top-16 md:top-20 h-[calc(100vh-4rem)] md:h-[calc(100vh-5rem)] bg-white flex flex-col items-center justify-center gap-8 font-medium text-lg z-40 border-t border-slate-200 shadow-sm transform transition-transform duration-200 ease-out ${
               open ? "translate-x-0" : "translate-x-full pointer-events-none"
@@ -137,16 +133,31 @@ export default function Navbar() {
                 Sobre
               </Link>
             </motion.div>
-            <motion.div whileTap={{ scale: 0.98 }}>
-              <Link to="/login" role="menuitem" onClick={() => setOpen(false)}>
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-black text-white no-underline shadow-sm hover:shadow-md hover:bg-black/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 px-4 py-2 text-sm font-medium cursor-pointer"
-                >
-                  Entrar 👋
-                </button>
-              </Link>
-            </motion.div>
+
+            {/* 🔐 Autenticação (MOBILE): troca "Entrar" pelo UserButton quando logado */}
+            <SignedOut>
+              <motion.div whileTap={{ scale: 0.98 }}>
+                <Link to="/login" role="menuitem" onClick={() => setOpen(false)}>
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-black text-white no-underline shadow-sm hover:shadow-md hover:bg-black/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 px-4 py-2 text-sm font-medium cursor-pointer"
+                  >
+                    Entrar 👋
+                  </button>
+                </Link>
+              </motion.div>
+            </SignedOut>
+
+            <SignedIn>
+              <div
+                role="menuitem"
+                aria-label="Abrir painel da conta"
+                className="flex items-center gap-3 rounded-xl ring-1 ring-slate-200 bg-white px-3 py-2 shadow-sm"
+              >
+                <UserButton afterSignOutUrl="/" />
+                <span className="text-sm text-slate-700">Conta</span>
+              </div>
+            </SignedIn>
           </motion.div>
         </div>
 
