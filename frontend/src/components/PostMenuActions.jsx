@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useUser, useAuth } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
@@ -5,15 +6,30 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { motion, useReducedMotion } from "framer-motion";
 
-const PostMenuActions = ({ post }) => {
+// Utilitário: sanitiza título para evitar caracteres que quebrem slug/rota
+function sanitizeTitleInput(input) {
+  if (!input) return "";
+  // Permite letras (com acento), números, espaço e hífen; remove o resto
+  const cleaned = input.replace(/[^0-9A-Za-zÀ-ÿ\s-]/g, " ");
+  // Normaliza espaços
+  return cleaned.replace(/\s+/g, " ").trimStart();
+}
+
+export default function PostMenuActions({ post }) {
   const { user } = useUser();
   const { getToken } = useAuth();
   const navigate = useNavigate();
   const prefersReduced = useReducedMotion();
   const queryClient = useQueryClient();
 
-  // Busca de salvos somente quando logado
-  const { isPending: savedLoading, isError: savedError, data: savedData } = useQuery({
+  // =========================
+  // Salvos do usuário (quando logado)
+  // =========================
+  const {
+    isPending: savedLoading,
+    isError: savedError,
+    data: savedData,
+  } = useQuery({
     queryKey: ["savedPosts"],
     enabled: !!user,
     queryFn: async () => {
@@ -28,6 +44,9 @@ const PostMenuActions = ({ post }) => {
   const isAdmin = user?.publicMetadata?.role === "admin";
   const isSaved = Array.isArray(savedData) && savedData.some((p) => p === post._id);
 
+  // =========================
+  // Mutations: excluir / salvar / destacar
+  // =========================
   const deleteMutation = useMutation({
     mutationFn: async () => {
       const token = await getToken();
@@ -68,30 +87,80 @@ const PostMenuActions = ({ post }) => {
     onError: (error) => toast.error(error?.response?.data || "Erro ao destacar matéria"),
   });
 
-  const handleDelete = () => {
-    if (!isAdmin || deleteMutation.isPending) return;
-    deleteMutation.mutate();
-  };
+  // =========================
+  // Edição inline (ADMIN)
+  // =========================
+  const [editOpen, setEditOpen] = useState(false);
+  const [title, setTitle] = useState(post?.title || "");
+  const [category, setCategory] = useState(post?.category || "");
+  const [desc, setDesc] = useState(post?.desc || "");
 
-  const handleFeature = () => {
-    if (!isAdmin || featureMutation.isPending) return;
-    featureMutation.mutate();
-  };
+  useEffect(() => {
+    // Mantém os campos sincronizados caso o post mude (navegação client-side)
+    setTitle(post?.title || "");
+    setCategory(post?.category || "");
+    setDesc(post?.desc || "");
+  }, [post?._id]);
 
-  const handleSave = () => {
-    if (!user || saveMutation.isPending) return;
-    saveMutation.mutate();
-  };
+  const clientSlugPreview = title
+    ? sanitizeTitleInput(title).toLowerCase().replace(/\s+/g, "-").replace(/-+/g, "-")
+    : "";
 
-  const handleEdit = () => {
+  const updateMutation = useMutation({
+    mutationFn: async (payload) => {
+      const token = await getToken();
+      // Preferimos PATCH para atualização parcial
+      return axios.patch(`${import.meta.env.VITE_API_URL}/posts/${post._id}`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    },
+    onSuccess: (res) => {
+      const updated = res?.data || {};
+      toast.success("Matéria atualizada!");
+      setEditOpen(false);
+      // Atualiza cache do post atual
+      queryClient.invalidateQueries({ queryKey: ["post", post.slug] });
+      // Se o backend gerou um novo slug, navega para ele (evita 404 e mantém URL correta)
+      if (updated?.slug && updated.slug !== post.slug) {
+        navigate(`/${updated.slug}`, { replace: true });
+      }
+    },
+    onError: (error) => toast.error(error?.response?.data || "Erro ao atualizar matéria"),
+  });
+
+  const handleEditOpen = () => {
     if (!isAdmin) return;
-    navigate(`/write?edit=${post._id}`);
+    setTitle(post?.title || "");
+    setCategory(post?.category || "");
+    setDesc(post?.desc || "");
+    setEditOpen(true);
+  };
+
+  const handleUpdate = (e) => {
+    e.preventDefault();
+    if (!isAdmin || updateMutation.isPending) return;
+
+    const cleanTitle = sanitizeTitleInput(title);
+    if (!cleanTitle) {
+      toast.error("Informe um título válido.");
+      return;
+    }
+
+    const payload = {
+      title: cleanTitle,
+      category: category || undefined,
+      desc: desc || "",
+      // Se quiser forçar slug no cliente, descomente a linha abaixo
+      // slug: clientSlugPreview,
+    };
+
+    updateMutation.mutate(payload);
   };
 
   const tapAnim = prefersReduced ? {} : { scale: 0.98 };
   const hoverAnim = prefersReduced ? {} : { y: -1 };
 
-  // Se não estiver logado, não renderiza ações
+  // Não logado → sem ações
   if (!user) return null;
 
   return (
@@ -101,7 +170,8 @@ const PostMenuActions = ({ post }) => {
         savedLoading ||
         saveMutation.isPending ||
         featureMutation.isPending ||
-        deleteMutation.isPending
+        deleteMutation.isPending ||
+        updateMutation.isPending
       }
       className="relative box-border w-full max-w-full overflow-x-clip break-words [overflow-wrap:anywhere] rounded-2xl ring-1 ring-slate-200 bg-white p-4 shadow-sm hover:shadow-md"
     >
@@ -126,7 +196,7 @@ const PostMenuActions = ({ post }) => {
           aria-pressed={isSaved}
           aria-disabled={saveMutation.isPending}
           disabled={saveMutation.isPending}
-          onClick={handleSave}
+          onClick={() => saveMutation.mutate()}
           className={`w-full text-left flex items-center gap-3 py-2 px-2 rounded-xl text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 transition ${
             saveMutation.isPending ? "opacity-60 cursor-not-allowed" : "hover:bg-slate-50"
           }`}
@@ -153,8 +223,10 @@ const PostMenuActions = ({ post }) => {
         </motion.button>
       )}
 
+      {/* Divider quando houver bloco admin */}
       {isAdmin && <hr className="my-2 border-slate-200" />}
 
+      {/* Admin-only */}
       {isAdmin && (
         <>
           <motion.button
@@ -164,7 +236,7 @@ const PostMenuActions = ({ post }) => {
             aria-pressed={post.isFeatured}
             aria-disabled={featureMutation.isPending}
             disabled={featureMutation.isPending}
-            onClick={handleFeature}
+            onClick={() => featureMutation.mutate()}
             className={`mt-1 w-full text-left flex items-center gap-3 py-2 px-2 rounded-xl text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 transition ${
               featureMutation.isPending ? "opacity-60 cursor-not-allowed" : "hover:bg-slate-50"
             }`}
@@ -190,11 +262,12 @@ const PostMenuActions = ({ post }) => {
             )}
           </motion.button>
 
+          {/* EDITAR INLINE (abre modal) */}
           <motion.button
             type="button"
             whileHover={hoverAnim}
             whileTap={tapAnim}
-            onClick={handleEdit}
+            onClick={handleEditOpen}
             className="mt-1 w-full text-left flex items-center gap-3 py-2 px-2 rounded-xl text-sm font-medium hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40"
           >
             <svg
@@ -216,7 +289,7 @@ const PostMenuActions = ({ post }) => {
             whileTap={tapAnim}
             aria-disabled={deleteMutation.isPending}
             disabled={deleteMutation.isPending}
-            onClick={handleDelete}
+            onClick={() => deleteMutation.mutate()}
             className={`mt-1 w-full text-left flex items-center gap-3 py-2 px-2 rounded-xl text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 transition ${
               deleteMutation.isPending ? "opacity-60 cursor-not-allowed" : "hover:bg-red-50"
             }`}
@@ -231,7 +304,7 @@ const PostMenuActions = ({ post }) => {
             >
               <path
                 fill="currentColor"
-                d="M21 2c-1.65 0-3 1.35-3 3v2H8a1 1 0 100 2h1v36c0 1.65 1.35 3 3 3h26c1.65 0 3-1.35 3-3V9h1a1 1 0 100-2h-7V5c0-1.65-1.35-3-3-3h-8zm0 2h8c.55 0 1 .45 1 1v2H20V5c0-.55.45-1 1-1zm-9 5h26v36c0 .55-.45 1-1 1H12c-.55 0-1-.45-1-1V9zm7 5a1 1 0 100 2v24a1 1 0 100-2V14zm6 0a 1 1 0 100 2v24a1 1 0 100-2V14zm6 0a1 1 0 100 2v24a1 1 0 100-2V14z"
+                d="M21 2c-1.65 0-3 1.35-3 3v2H8a1 1 0 100 2h1v36c0 1.65 1.35 3 3 3h26c1.65 0 3-1.35 3-3V9h1a1 1 0 100-2h-7V5c0-1.65-1.35-3-3-3h-8zm0 2h8c.55 0 1 .45 1 1v2H20V5c0-.55.45-1 1-1zm-9 5h26v36c0 .55-.45 1-1 1H12c-.55 0-1-.45-1-1V9zm7 5a1 1 0 100 2v24a1 1 0 100-2V14zm6 0a1 1 0 100 2v24a1 1 0 100-2V14zm6 0a1 1 0 100 2v24a1 1 0 100-2V14z"
               />
             </svg>
             <span className="text-slate-900/95">Excluir</span>
@@ -241,8 +314,122 @@ const PostMenuActions = ({ post }) => {
           </motion.button>
         </>
       )}
+
+      {/* ===== Modal de edição inline ===== */}
+      {isAdmin && editOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          {/* backdrop */}
+          <div
+            className="absolute inset-0 bg-black/30"
+            aria-hidden="true"
+            onClick={() => setEditOpen(false)}
+          />
+
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dialog-editar-titulo"
+            initial={prefersReduced ? {} : { opacity: 0, y: 12, scale: 0.98 }}
+            animate={prefersReduced ? {} : { opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="relative z-[61] w-full max-w-xl rounded-2xl ring-1 ring-slate-200 bg-white shadow-xl p-4 md:p-6"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <h3 id="dialog-editar-titulo" className="text-lg font-semibold text-slate-900">
+                Editar matéria (rápido)
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditOpen(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40"
+                aria-label="Fechar"
+                title="Fechar"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdate} className="mt-4 space-y-4">
+              {/* Título (sanitizado em tempo real) */}
+              <div>
+                <label htmlFor="edit-title" className="block text-sm font-medium text-slate-800">
+                  Título
+                </label>
+                <input
+                  id="edit-title"
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(sanitizeTitleInput(e.target.value))}
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const text = (e.clipboardData || window.clipboardData).getData("text");
+                    setTitle(sanitizeTitleInput(text));
+                  }}
+                  className="mt-1 w-full rounded-xl ring-1 ring-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600/40"
+                  placeholder="Título da matéria"
+                  autoComplete="off"
+                  required
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Link previsto: <span className="font-mono">/{clientSlugPreview}</span>
+                </p>
+              </div>
+
+              {/* Categoria */}
+              <div>
+                <label htmlFor="edit-category" className="block text-sm font-medium text-slate-800">
+                  Categoria
+                </label>
+                <select
+                  id="edit-category"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="mt-1 w-full rounded-xl ring-1 ring-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600/40"
+                >
+                  <option value="">Selecione</option>
+                  <option value="ciencia">Ciência</option>
+                  <option value="politica">Política</option>
+                  <option value="negocios">Negócios</option>
+                  <option value="tecnologia">Tecnologia</option>
+                  <option value="marketing">Marketing</option>
+                </select>
+              </div>
+
+              {/* Descrição curta */}
+              <div>
+                <label htmlFor="edit-desc" className="block text-sm font-medium text-slate-800">
+                  Descrição curta
+                </label>
+                <textarea
+                  id="edit-desc"
+                  rows={3}
+                  value={desc}
+                  onChange={(e) => setDesc(e.target.value)}
+                  className="mt-1 w-full rounded-2xl ring-1 ring-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600/40"
+                  placeholder="Resumo da matéria"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditOpen(false)}
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm hover:shadow-md hover:bg-slate-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 px-4 py-2 text-sm font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={updateMutation.isPending}
+                  className="inline-flex items-center justify-center rounded-xl border border-transparent bg-blue-600 text-white shadow-sm hover:shadow-md hover:bg-blue-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 px-4 py-2 text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {updateMutation.isPending ? "Salvando…" : "Salvar alterações"}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </section>
   );
-};
-
-export default PostMenuActions;
+}
