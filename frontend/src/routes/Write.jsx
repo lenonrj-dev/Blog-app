@@ -3,11 +3,41 @@ import "react-quill-new/dist/quill.snow.css";
 import ReactQuill from "react-quill-new";
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Upload from "../components/Upload";
 import { motion, useReducedMotion } from "framer-motion";
+
+// ================================
+// Utilidades de sanitização
+// ================================
+// Conjunto de caracteres PERIGOSOS para path/URL que vamos BLOQUEAR no título
+// Inclui separadores de caminho, querystring, fragmentos e símbolos comuns que podem confundir roteamento
+const DISALLOWED_REGEX = /[\/\\\?\#\%\&\+\;\:\=\@\[\]\{\}\(\)\*'"<>\|\^~`,.!]/g; // eslint-disable-line no-useless-escape
+
+// Mantemos letras (inclui acentos latinos), números, espaço e hífen
+// Qualquer outro caractere vira espaço e depois colapsamos
+const ALLOWED_REGEX = /[^0-9A-Za-zÀ-ÖØ-öø-ÿ \-]/g;
+
+function sanitizeTitleForPath(input) {
+  if (!input) return "";
+  // 1) Substitui explicitamente os perigosos por espaço (garante remoção de / ? # etc.)
+  let s = input.replace(DISALLOWED_REGEX, " ");
+  // 2) Remove qualquer coisa fora do conjunto seguro (mantém letras acentuadas, dígitos, espaço, hífen)
+  s = s.replace(ALLOWED_REGEX, " ");
+  // 3) Colapsa espaços e trim
+  s = s.replace(/\s+/g, " ").trim();
+  // 4) Evita nomes especiais de path (., ..)
+  if (s === "." || s === "..") s = "";
+  return s;
+}
+
+// Evita digitação direta de caracteres proibidos (melhora UX no mobile)
+function isDisallowedKey(key) {
+  // Usa a mesma lista conceitual do DISALLOWED_REGEX (apenas atalho para eventos de teclado)
+  return /[\\/\?\#\%\&\+\;\:\=\@\[\]\{\}\(\)\*'"<>\|\^~`,.!]/.test(key);
+}
 
 const Write = () => {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -18,6 +48,8 @@ const Write = () => {
   const [img, setImg] = useState("");
   const [video, setVideo] = useState("");
   const [progress, setProgress] = useState(0);
+  const [title, setTitle] = useState("");
+  const [removedCount, setRemovedCount] = useState(0);
   const prefersReduced = useReducedMotion();
 
   const navigate = useNavigate();
@@ -28,13 +60,11 @@ const Write = () => {
     if (!isLoaded) return; // aguarda Clerk
 
     if (!isSignedIn) {
-      // não logado → login
       navigate("/login", { replace: true });
       return;
     }
 
     if (!isAdmin) {
-      // logado mas não é admin → volta para a home
       toast.error("Acesso restrito — apenas administradores.");
       navigate("/", { replace: true });
     }
@@ -48,6 +78,9 @@ const Write = () => {
   useEffect(() => {
     if (video) setValue((prev) => prev + `<p><iframe class="ql-video" src="${video.url}"/></p>`);
   }, [video]);
+
+  // Título "seguro" derivado (mostrado como placeholder de slug mental)
+  const safeTitlePreview = useMemo(() => sanitizeTitleForPath(title), [title]);
 
   const mutation = useMutation({
     mutationFn: async (newPost) => {
@@ -65,7 +98,6 @@ const Write = () => {
     },
   });
 
-  // Estados de carregamento/redirect do gate
   if (!isLoaded) {
     return (
       <div role="status" aria-live="polite" className="text-sm text-slate-600 p-6">
@@ -88,13 +120,53 @@ const Write = () => {
     );
   }
 
+  // ================================
+  // Handlers de Título (bloqueio total de caracteres perigosos)
+  // ================================
+  const handleTitleChange = (e) => {
+    const incoming = e.target.value || "";
+    const beforeLen = incoming.length;
+    const sanitized = sanitizeTitleForPath(incoming);
+    const afterLen = sanitized.length;
+    const removed = Math.max(0, beforeLen - afterLen);
+    setRemovedCount((prev) => (removed > 0 ? prev + removed : prev));
+    setTitle(sanitized);
+  };
+
+  const handleTitleKeyDown = (e) => {
+    // Bloqueia imediatamente teclas perigosas (inclui '/')
+    if (isDisallowedKey(e.key)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  const handleTitlePaste = (e) => {
+    const text = (e.clipboardData || window.clipboardData).getData("text");
+    const sanitized = sanitizeTitleForPath(text);
+    e.preventDefault();
+    // Insere o texto já sanitizado
+    const target = e.target;
+    const start = target.selectionStart;
+    const end = target.selectionEnd;
+    const next = (title.slice(0, start) + sanitized + title.slice(end)).slice(0, 180);
+    setTitle(next);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+
     const formData = new FormData(e.target);
+
+    const titleSafe = sanitizeTitleForPath(title);
+    if (!titleSafe) {
+      toast.error("Informe um título válido (sem caracteres especiais proibidos).");
+      return;
+    }
 
     const data = {
       img: cover.filePath || "",
-      title: formData.get("title"),
+      title: titleSafe, // ✅ envia TÍTULO já sanitizado (evita gerar slug ruim no backend)
       category: formData.get("category"),
       desc: formData.get("desc"),
       content: value,
@@ -152,6 +224,7 @@ const Write = () => {
           )}
         </section>
 
+        {/* TÍTULO com BLOQUEIO de caracteres perigosos */}
         <div>
           <label htmlFor="titulo" className="sr-only">
             Título da matéria
@@ -160,11 +233,23 @@ const Write = () => {
             id="titulo"
             className="w-full text-2xl md:text-4xl font-semibold bg-transparent rounded-xl px-2 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40"
             type="text"
-            placeholder="Título da matéria"
-            name="title"
+            placeholder="Título da matéria (será usado no link)"
+            name="title-input"
             aria-label="Título da matéria"
             autoComplete="off"
+            inputMode="text"
+            maxLength={180}
+            // pattern extra (bloqueia no submit caso browser suporte)
+            pattern="[0-9A-Za-zÀ-ÖØ-öø-ÿ \-]+"
+            title="Use apenas letras (com acentos), números, espaços e hífen."
+            value={title}
+            onChange={handleTitleChange}
+            onKeyDown={handleTitleKeyDown}
+            onPaste={handleTitlePaste}
           />
+          <div className="mt-1 text-xs text-slate-500" aria-live="polite">
+            Link seguro prévia: <span className="font-medium">{safeTitlePreview || "(vazio)"}</span>
+          </div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -199,7 +284,13 @@ const Write = () => {
             name="desc"
             placeholder="Descrição curta"
             aria-label="Descrição curta"
+            maxLength={320}
           />
+          {removedCount > 0 && (
+            <p className="mt-1 text-xs text-amber-600">
+              {removedCount} caractere(s) especial(is) foram removidos do título para manter o link seguro.
+            </p>
+          )}
         </div>
 
         <section aria-label="Editor de conteúdo" className="flex flex-1">
