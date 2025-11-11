@@ -4,18 +4,17 @@ import ImageKit from "imagekit";
 import Post from "../models/post.model.js";
 import User from "../models/user.model.js";
 
-// -----------------------------
-// Helpers
-// -----------------------------
-const slugify = (str = "") => {
-  return String(str)
-    .normalize("NFD") // remove acentos
+/* =========================================================================
+ * Utils
+ * ========================================================================= */
+const slugify = (str = "") =>
+  String(str)
+    .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-") // qualquer coisa que não for [a-z0-9]
-    .replace(/^-+|-+$/g, "") // trim '-'
-    .replace(/-{2,}/g, "-"); // collapse
-};
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-");
 
 const makeUniqueSlug = async (base, excludeId = null) => {
   let slug = base || "";
@@ -24,93 +23,95 @@ const makeUniqueSlug = async (base, excludeId = null) => {
     excludeId
       ? await Post.exists({ slug: s, _id: { $ne: excludeId } })
       : await Post.exists({ slug: s });
-  while (await exists(slug)) {
-    slug = `${base}-${i++}`;
-  }
+
+  while (await exists(slug)) slug = `${base}-${i++}`;
   return slug;
 };
 
 const getAuthInfo = (req) => {
   const auth = typeof req.auth === "function" ? req.auth() : req.auth || {};
   const userId = auth.userId;
-  const role = auth?.sessionClaims?.metadata?.role || auth?.sessionClaims?.role || "user";
+  const role =
+    auth?.sessionClaims?.metadata?.role ||
+    auth?.sessionClaims?.role ||
+    "user";
   const claims = auth?.sessionClaims || {};
   return { userId, role, claims };
 };
 
-// -----------------------------
-// LISTAR
-// -----------------------------
+/* =========================================================================
+ * LISTAR — paginação correta (sem “buracos”) e filtros
+ * ========================================================================= */
 export const getPosts = async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 2;
+  const page = Math.max(parseInt(req.query.page) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 50);
 
   const query = {};
-
   const cat = req.query.cat;
   const author = req.query.author;
   const searchQuery = req.query.search;
   const sortQuery = req.query.sort;
   const featured = req.query.featured;
 
-  if (cat) {
-    query.category = cat;
-  }
-
-  if (searchQuery) {
-    query.title = { $regex: searchQuery, $options: "i" };
-  }
+  if (cat) query.category = cat;
+  if (featured) query.isFeatured = true;
+  if (searchQuery) query.title = { $regex: searchQuery, $options: "i" };
 
   if (author) {
     const user = await User.findOne({ username: author }).select("_id");
-    if (!user) return res.status(404).json("Nenhuma matéria encontrada!");
+    if (!user)
+      return res.status(200).json({ posts: [], hasMore: false, page, total: 0, limit });
     query.user = user._id;
   }
 
   let sortObj = { createdAt: -1 };
-  if (sortQuery) {
-    switch (sortQuery) {
-      case "newest":
-        sortObj = { createdAt: -1 };
-        break;
-      case "oldest":
-        sortObj = { createdAt: 1 };
-        break;
-      case "popular":
-        sortObj = { visit: -1 };
-        break;
-      case "trending":
-        sortObj = { visit: -1 };
-        query.createdAt = { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) };
-        break;
-      default:
-        break;
-    }
+  switch (sortQuery) {
+    case "newest":
+      sortObj = { createdAt: -1 };
+      break;
+    case "oldest":
+      sortObj = { createdAt: 1 };
+      break;
+    case "popular":
+      sortObj = { visit: -1 };
+      break;
+    case "trending":
+      sortObj = { visit: -1 };
+      query.createdAt = { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) };
+      break;
+    default:
+      break;
   }
 
-  if (featured) query.isFeatured = true;
-
-  const [posts, totalFiltered] = await Promise.all([
-    Post.find(query).populate("user", "username").sort(sortObj).limit(limit).skip((page - 1) * limit),
+  const [posts, total] = await Promise.all([
+    Post.find(query)
+      .populate("user", "username")
+      .sort(sortObj)
+      .skip((page - 1) * limit)
+      .limit(limit),
     Post.countDocuments(query),
   ]);
 
-  const hasMore = page * limit < totalFiltered;
-  res.status(200).json({ posts, hasMore });
+  const hasMore = page * limit < total;
+
+  return res.status(200).json({ posts, hasMore, page, total, limit });
 };
 
-// -----------------------------
-// OBTER
-// -----------------------------
+/* =========================================================================
+ * OBTER
+ * ========================================================================= */
 export const getPost = async (req, res) => {
-  const post = await Post.findOne({ slug: req.params.slug }).populate("user", "username img");
+  const post = await Post.findOne({ slug: req.params.slug }).populate(
+    "user",
+    "username img"
+  );
   if (!post) return res.status(404).json("Matéria não encontrada!");
-  res.status(200).json(post);
+  return res.status(200).json(post);
 };
 
-// -----------------------------
-// CRIAR
-// -----------------------------
+/* =========================================================================
+ * CRIAR
+ * ========================================================================= */
 export const createPost = async (req, res) => {
   const { userId, claims } = getAuthInfo(req);
   if (!userId) return res.status(401).json("Não autenticado!");
@@ -145,9 +146,9 @@ export const createPost = async (req, res) => {
   return res.status(200).json(post);
 };
 
-// -----------------------------
-// ATUALIZAR (PATCH /posts/:id)
-// -----------------------------
+/* =========================================================================
+ * ATUALIZAR (edição inline na SinglePostPage)
+ * ========================================================================= */
 export const updatePost = async (req, res) => {
   const { userId, role } = getAuthInfo(req);
   if (!userId) return res.status(401).json("Não autenticado!");
@@ -157,19 +158,22 @@ export const updatePost = async (req, res) => {
   if (!post) return res.status(404).json("Matéria não encontrada!");
 
   // autorização: admin OU autor
-  let isOwner = false;
   if (role !== "admin") {
     const dbUser = await User.findOne({ clerkUserId: userId }).select("_id");
     if (!dbUser) return res.status(403).json("Sem permissão!");
-    isOwner = String(post.user) === String(dbUser._id);
+    const isOwner = String(post.user) === String(dbUser._id);
     if (!isOwner) return res.status(403).json("Sem permissão!");
   }
 
+  const allowed = ["title", "desc", "category", "img", "content"];
   const updates = {};
-  const allowed = ["title", "desc", "category", "img", "content"]; // campos permitidos
   for (const k of allowed) if (k in req.body) updates[k] = req.body[k];
 
-  if (typeof updates.title === "string" && updates.title.trim() && updates.title !== post.title) {
+  if (
+    typeof updates.title === "string" &&
+    updates.title.trim() &&
+    updates.title !== post.title
+  ) {
     const base = slugify(updates.title);
     updates.slug = await makeUniqueSlug(base, post._id);
   }
@@ -178,9 +182,9 @@ export const updatePost = async (req, res) => {
   return res.status(200).json(updated);
 };
 
-// -----------------------------
-// EXCLUIR
-// -----------------------------
+/* =========================================================================
+ * EXCLUIR
+ * ========================================================================= */
 export const deletePost = async (req, res) => {
   const auth = typeof req.auth === "function" ? req.auth() : req.auth || {};
   const clerkUserId = auth.userId;
@@ -194,15 +198,22 @@ export const deletePost = async (req, res) => {
   }
 
   const user = await User.findOne({ clerkUserId });
-  const deletedPost = await Post.findOneAndDelete({ _id: req.params.id, user: user._id });
-  if (!deletedPost) return res.status(403).json("Você só pode excluir suas próprias matérias!");
+  const deletedPost = await Post.findOneAndDelete({
+    _id: req.params.id,
+    user: user._id,
+  });
 
-  res.status(200).json("Matéria excluída");
+  if (!deletedPost)
+    return res
+      .status(403)
+      .json("Você só pode excluir suas próprias matérias!");
+
+  return res.status(200).json("Matéria excluída");
 };
 
-// -----------------------------
-// DESTACAR
-// -----------------------------
+/* =========================================================================
+ * DESTACAR
+ * ========================================================================= */
 export const featurePost = async (req, res) => {
   const auth = typeof req.auth === "function" ? req.auth() : req.auth || {};
   const clerkUserId = auth.userId;
@@ -211,7 +222,8 @@ export const featurePost = async (req, res) => {
   if (!clerkUserId) return res.status(401).json("Não autenticado!");
 
   const role = auth.sessionClaims?.metadata?.role || "user";
-  if (role !== "admin") return res.status(403).json("Você não pode destacar matérias!");
+  if (role !== "admin")
+    return res.status(403).json("Você não pode destacar matérias!");
 
   const post = await Post.findById(postId);
   if (!post) return res.status(404).json("Matéria não encontrada!");
@@ -222,12 +234,12 @@ export const featurePost = async (req, res) => {
     { new: true }
   );
 
-  res.status(200).json(updatedPost);
+  return res.status(200).json(updatedPost);
 };
 
-// -----------------------------
-// ImageKit auth
-// -----------------------------
+/* =========================================================================
+ * ImageKit auth
+ * ========================================================================= */
 const imagekit = new ImageKit({
   urlEndpoint: process.env.IK_URL_ENDPOINT,
   publicKey: process.env.IK_PUBLIC_KEY,
@@ -236,15 +248,12 @@ const imagekit = new ImageKit({
 
 export const uploadAuth = (req, res) => {
   try {
-    console.log("HIT /posts/upload-auth", {
-      hasUrl: !!process.env.IK_URL_ENDPOINT,
-      hasPub: !!process.env.IK_PUBLIC_KEY,
-      hasPri: !!process.env.IK_PRIVATE_KEY,
-    });
     const result = imagekit.getAuthenticationParameters();
     return res.json(result);
   } catch (e) {
     console.error("ImageKit auth error:", e);
-    return res.status(500).json({ message: "Falha na autenticação do ImageKit" });
+    return res
+      .status(500)
+      .json({ message: "Falha na autenticação do ImageKit" });
   }
 };
