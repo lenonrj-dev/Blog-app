@@ -1,7 +1,7 @@
+import { useEffect, useState } from "react";
 import PostListItem from "./PostListItem";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import InfiniteScroll from "react-infinite-scroll-component";
 import { useSearchParams } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 
@@ -15,10 +15,8 @@ async function fetchPosts({ pageParam, searchParams, signal }) {
     timeout: 15000,
     withCredentials: false,
   });
-  if (!data || !Array.isArray(data.posts)) {
-    throw new Error("Resposta inesperada da API");
-  }
-  return data; // { posts, hasMore, page, total, limit }
+  if (!data || !Array.isArray(data.posts)) throw new Error("Resposta inesperada da API");
+  return data; // { posts, hasMore }
 }
 
 function SkeletonCard() {
@@ -31,37 +29,45 @@ function SkeletonCard() {
   );
 }
 
-const PostList = () => {
+export default function PostList() {
   const [searchParams] = useSearchParams();
   const prefersReduced = useReducedMotion();
+  const [page, setPage] = useState(1);
+
+  // Sempre que filtros/busca mudarem, volta pra página 1
+  useEffect(() => {
+    setPage(1);
+  }, [searchParams.toString()]);
 
   const {
     data,
     error,
-    fetchNextPage,
-    hasNextPage,
-    isFetching,
-    isFetchingNextPage,
     status,
+    isFetching,
+    isRefetching,
     refetch,
-  } = useInfiniteQuery({
-    queryKey: ["posts", searchParams.toString()],
-    queryFn: ({ pageParam = 1, signal }) =>
-      fetchPosts({ pageParam, searchParams, signal }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, pages) =>
-      lastPage?.hasMore ? pages.length + 1 : undefined,
+  } = useQuery({
+    queryKey: ["posts", searchParams.toString(), page],
+    queryFn: ({ signal }) => fetchPosts({ pageParam: page, searchParams, signal }),
+    keepPreviousData: true,
     refetchOnWindowFocus: false,
     retry: 1,
     staleTime: 30_000,
   });
 
+  const posts = data?.posts ?? [];
+  const hasMore = Boolean(data?.hasMore);
+
+  const fadeInUp = {
+    initial: { opacity: 0, y: prefersReduced ? 0 : 10, filter: prefersReduced ? "none" : "blur(2px)" },
+    animate: { opacity: 1, y: 0, filter: "none", transition: { duration: 0.32, ease: "easeOut" } },
+  };
+  const stagger = { animate: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } } };
+
+  // Loading inicial
   if (status === "pending") {
     return (
-      <section
-        aria-label="Lista de matérias"
-        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-      >
+      <section aria-label="Lista de matérias" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid grid-cols-1 gap-6">
           {Array.from({ length: 3 }).map((_, i) => (
             <SkeletonCard key={i} />
@@ -71,6 +77,7 @@ const PostList = () => {
     );
   }
 
+  // Erro
   if (status === "error") {
     return (
       <section className="rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm">
@@ -87,52 +94,16 @@ const PostList = () => {
     );
   }
 
-  const allPosts = data?.pages?.flatMap((p) => p.posts) || [];
-
-  const fadeInUp = {
-    initial: {
-      opacity: 0,
-      y: prefersReduced ? 0 : 10,
-      filter: prefersReduced ? "none" : "blur(2px)",
-    },
-    animate: {
-      opacity: 1,
-      y: 0,
-      filter: "none",
-      transition: { duration: 0.32, ease: "easeOut" },
-    },
-  };
-  const stagger = {
-    animate: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
-  };
-
   return (
     <section
       aria-label="Lista de matérias"
-      aria-busy={isFetching || isFetchingNextPage}
+      aria-busy={isFetching || isRefetching}
       className="rounded-2xl border border-slate-200 bg-white p-0 shadow-sm overflow-x-hidden"
     >
-      <InfiniteScroll
-        dataLength={allPosts.length}
-        next={fetchNextPage}
-        hasMore={Boolean(hasNextPage)}
-        style={{ overflow: "visible" }}
-        className="overflow-visible"
-        loader={
-          <div
-            role="status"
-            aria-live="polite"
-            className="px-4 py-3 text-sm text-slate-600"
-          >
-            Carregando mais matérias...
-          </div>
-        }
-        endMessage={
-          <p className="px-4 py-3 text-sm text-slate-700">
-            <b>Todos os posts foram carregados.</b>
-          </p>
-        }
-      >
+      {/* Lista de apenas 10 itens (página atual) */}
+      {posts.length === 0 ? (
+        <div className="px-4 py-6 text-sm text-slate-600">Nenhuma matéria encontrada.</div>
+      ) : (
         <motion.ul
           variants={stagger}
           initial="initial"
@@ -143,8 +114,8 @@ const PostList = () => {
           itemType="https://schema.org/ItemList"
           className="flex flex-col gap-8"
         >
-          <meta itemProp="numberOfItems" content={String(allPosts.length)} />
-          {allPosts.map((post) => (
+          <meta itemProp="numberOfItems" content={String(posts.length)} />
+          {posts.map((post) => (
             <motion.li
               key={post._id}
               variants={fadeInUp}
@@ -156,9 +127,40 @@ const PostList = () => {
             </motion.li>
           ))}
         </motion.ul>
-      </InfiniteScroll>
+      )}
+
+      {/* Rodapé de paginação */}
+      <div className="flex items-center justify-between gap-3 px-4 py-4 border-t border-slate-200">
+        <div className="text-xs text-slate-500">
+          Página {page} {isFetching && <span className="ml-1">(carregando...)</span>}
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Botão Voltar (opcional – aparece só se page>1) */}
+          {page > 1 && (
+            <button
+              type="button"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" }) || setPage((p) => Math.max(1, p - 1))}
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm hover:shadow-md hover:bg-slate-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 px-3 py-2 text-xs font-medium"
+            >
+              Voltar
+            </button>
+          )}
+
+          {hasMore ? (
+            <button
+              type="button"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" }) || setPage((p) => p + 1)}
+              aria-disabled={isFetching}
+              disabled={isFetching}
+              className="inline-flex items-center justify-center rounded-xl border border-transparent bg-blue-600 text-white shadow-sm hover:shadow-md hover:bg-blue-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 px-4 py-2 text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              Ver mais
+            </button>
+          ) : (
+            <span className="text-xs text-slate-500">Sem mais resultados</span>
+          )}
+        </div>
+      </div>
     </section>
   );
-};
-
-export default PostList;
+}

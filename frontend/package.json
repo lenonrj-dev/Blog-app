@@ -17,6 +17,7 @@
     "dompurify": "^3.3.0",
     "framer-motion": "^12.23.24",
     "imagekitio-react": "^4.3.0",
+    "lucide-react": "^0.553.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-infinite-scroll-component": "^6.1.0",
